@@ -24,6 +24,8 @@ final class LaunchEndpointsRunNoArtisanTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $root = $this->createTenantUser($tenant, ['email' => 'root@gap057.example.com'], ['super_admin']);
+        // OWN-2026-024 H3: launch endpoints are host operations (platform.ops.view); the role name no longer passes them.
+        $this->provisionTestPlatformOperator($root, ['platform.ops.view']);
 
         Artisan::shouldReceive('call')->andReturnUsing(function (string $command) {
             $this->artisanCalls[] = $command;

@@ -30,7 +30,7 @@ class TaskApiTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin([], null, ['task.create']); // S4c fixture: task creation requires the canonical task.create permission (the route gate is stubbed in this suite)
+        $this->apiActingAsTenantAdmin([], null, ['task.create', 'task.view', 'task.update']); // OWN-2026-024 H3: + task.view/task.update route codes (bypass removed). S4c fixture: task creation requires the canonical task.create permission (the route gate is stubbed in this suite)
         $this->user = $this->apiFeatureUser;
         $this->tenantId = $this->apiFeatureTenant->id;
     }

@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
+use App\Support\Rbac\RbacSeedGrants;
 use Database\Seeders\PayrollRolePermissionSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\TreasuryRolePermissionSeeder;
@@ -46,7 +47,8 @@ class ProductionRbacCommand extends Command
      * the canonical catalogue first; ZenaPermissionsSeeder runs again after PermissionSeeder; the additive grant seeders
      * follow. O-18 (2026-11-24): PermissionSeeder grants Project Manager / Project Member additively (no longer sync()),
      * and Project Member no longer receives crm.view / contract.view / boq.view / vendor.view / event-record.view from
-     * it. Re-running this command never revokes grants an environment already holds.
+     * it. Re-running this command never revokes grants an environment already holds. OWN-2026-024 H2a: ZenaPermissionsSeeder also
+     * creates the five platform.* codes (catalogue only; no seeder or baseline grant below ever hands them out).
      */
     private const SEEDERS = [
         ZenaPermissionsSeeder::class,
@@ -64,6 +66,9 @@ class ProductionRbacCommand extends Command
      * logs time (task.view, GAP-112), project staff open project pages.
      */
     private const BASELINE_GRANTS = [
+        // OWN-2026-024 H2a (Owner Gate 2, D3): the Owner manages its OWN notification settings explicitly. Deliberately NOT
+        // granted (D3): task.assign, change_request.create, component.create, component.read, component.update.
+        'super_admin' => ['notification.manage_rules'],
         'Finance' => ['task.view'],
         'Project Manager' => ['task.view', 'project.view'],
         'site_engineer' => ['task.view', 'project.view'],
@@ -108,7 +113,8 @@ class ProductionRbacCommand extends Command
             foreach (self::BASELINE_GRANTS as $roleName => $codes) {
                 /** @var Role $role */
                 $role = Role::query()->where('name', $roleName)->firstOrFail();
-                $role->permissions()->syncWithoutDetaching(Permission::query()->whereIn('code', $codes)->pluck('id')->all());
+                // OWN-2026-024 H2b (D4): same filtered seed path (never restores a deliberate revocation, never platform.*).
+                RbacSeedGrants::grantIds((string) $role->id, Permission::query()->whereIn('code', $codes)->pluck('id')->all());
             }
             if ($withTemplates) {
                 $this->runSeeder(WorkTemplateBaselineSeeder::class);

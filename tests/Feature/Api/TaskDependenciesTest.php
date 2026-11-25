@@ -28,7 +28,8 @@ class TaskDependenciesTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin();
+        // OWN-2026-024 H3 fixture: the super_admin role-name bypass is gone; grant exactly the codes these routes are gated on.
+        $this->apiActingAsTenantAdmin([], null, ['task.dependencies.view', 'task.dependencies.add', 'task.dependencies.remove', 'task.update-status']);
         $this->user = $this->apiFeatureUser;
         $this->project = Project::factory()->create([
             'created_by' => $this->user->id,

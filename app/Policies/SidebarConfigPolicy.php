@@ -6,109 +6,87 @@ namespace App\Policies;
 
 use App\Models\SidebarConfig;
 use App\Models\User;
+use App\Support\Rbac\RbacProtection;
 
+/**
+ * Sidebar config management (api/admin/sidebar-configs/*, behind only the parameterless `rbac` gate — this policy is the
+ * real authorization).
+ *
+ * OWN-2026-024 (O-17h) H4: the former `before()` hook granted every ability to the role NAME `super_admin`, and the read
+ * abilities also to the role name / legacy `users.role` value `admin`. Both are removed. The former population ("Super Admin
+ * only", i.e. the company Owner) is kept, expressed canonically: the Owner role together with its revocable
+ * admin.company.manage grant (RbacProtection::hasOwnerAuthority). Object abilities are additionally bound to the actor's own
+ * tenant; a GLOBAL config (tenant_id NULL) affects every tenant and is therefore not managed by a tenant Owner here (who may
+ * manage global sidebar configs is a separate Owner decision — see 105 §2).
+ */
 class SidebarConfigPolicy
 {
-    /**
-     * Perform pre-authorization checks.
-     */
-    public function before(User $user, string $ability): ?bool
-    {
-        // Super Admin has full access to everything
-        if ($user->hasRole('super_admin')) {
-            return true;
-        }
-
-        return null;
-    }
-
-    /**
-     * Determine whether the user can view any sidebar configs.
-     */
     public function viewAny(User $user): bool
     {
-        // Only Super Admin and Admin can view sidebar configs
-        return $user->hasRole(['super_admin', 'admin']);
+        return $this->tenantOwner($user);
     }
 
-    /**
-     * Determine whether the user can view the sidebar config.
-     */
     public function view(User $user, SidebarConfig $sidebarConfig): bool
     {
-        // Only Super Admin and Admin can view sidebar configs
-        return $user->hasRole(['super_admin', 'admin']);
+        return $this->ownsTenantConfig($user, $sidebarConfig);
     }
 
-    /**
-     * Determine whether the user can create sidebar configs.
-     */
     public function create(User $user): bool
     {
-        // Only Super Admin can create sidebar configs
-        return $user->hasRole('super_admin');
+        return $this->tenantOwner($user);
     }
 
-    /**
-     * Determine whether the user can update the sidebar config.
-     */
-    public function update(User $user, SidebarConfig $sidebarConfig): bool
+    public function update(User $user, ?SidebarConfig $sidebarConfig = null): bool
     {
-        // Only Super Admin can update sidebar configs
-        return $user->hasRole('super_admin');
+        // Class-level 'update' (role reset) acts on the actor's own tenant (the controller resolves TenantContext).
+        return $sidebarConfig === null ? $this->tenantOwner($user) : $this->ownsTenantConfig($user, $sidebarConfig);
     }
 
-    /**
-     * Determine whether the user can delete the sidebar config.
-     */
     public function delete(User $user, SidebarConfig $sidebarConfig): bool
     {
-        // Only Super Admin can delete sidebar configs
-        return $user->hasRole('super_admin');
+        return $this->ownsTenantConfig($user, $sidebarConfig);
     }
 
-    /**
-     * Determine whether the user can restore the sidebar config.
-     */
     public function restore(User $user, SidebarConfig $sidebarConfig): bool
     {
-        // Only Super Admin can restore sidebar configs
-        return $user->hasRole('super_admin');
+        return $this->ownsTenantConfig($user, $sidebarConfig);
     }
 
-    /**
-     * Determine whether the user can permanently delete the sidebar config.
-     */
     public function forceDelete(User $user, SidebarConfig $sidebarConfig): bool
     {
-        // Only Super Admin can force delete sidebar configs
-        return $user->hasRole('super_admin');
+        return $this->ownsTenantConfig($user, $sidebarConfig);
     }
 
-    /**
-     * Determine whether the user can manage sidebar configs.
-     */
     public function manage(User $user): bool
     {
-        // Only Super Admin can manage sidebar configs
-        return $user->hasRole('super_admin');
+        return $this->tenantOwner($user);
     }
 
-    /**
-     * Determine whether the user can clone sidebar configs.
-     */
     public function clone(User $user): bool
     {
-        // Only Super Admin can clone sidebar configs
-        return $user->hasRole('super_admin');
+        return $this->tenantOwner($user);
+    }
+
+    public function reset(User $user): bool
+    {
+        return $this->tenantOwner($user);
     }
 
     /**
-     * Determine whether the user can reset sidebar configs.
+     * Class-level abilities act on the actor's own tenant (the controller resolves TenantContext, which falls back to it); a
+     * tenant-less account would make the controller fall back to a request-supplied tenant_id, so it is refused here (Gate 8).
      */
-    public function reset(User $user): bool
+    private function tenantOwner(User $user): bool
     {
-        // Only Super Admin can reset sidebar configs
-        return $user->hasRole('super_admin');
+        return $user->getAttribute('tenant_id') !== null && RbacProtection::hasOwnerAuthority($user);
+    }
+
+    private function ownsTenantConfig(User $user, SidebarConfig $sidebarConfig): bool
+    {
+        $configTenant = $sidebarConfig->getAttribute('tenant_id');
+
+        return $this->tenantOwner($user)
+            && $configTenant !== null
+            && (string) $configTenant === (string) $user->getAttribute('tenant_id');
     }
 }

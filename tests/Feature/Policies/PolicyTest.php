@@ -28,6 +28,18 @@ class PolicyTest extends TestCase
 
     protected $tenant;
 
+    /** OWN-2026-024 H4: a canonical grant through a test-owned role (user_roles -> role_permissions). */
+    private function grantCodes(User $user, array $codes): void
+    {
+        $role = \App\Models\Role::firstOrCreate(['name' => 'o17h-h4-document-fixture'], ['scope' => 'custom', 'is_active' => true]);
+        foreach ($codes as $code) {
+            [$module, $action] = explode('.', $code, 2);
+            $permission = \App\Models\Permission::firstOrCreate(['code' => $code], ['name' => $code, 'module' => $module, 'action' => $action, 'description' => $code]);
+            $role->permissions()->syncWithoutDetaching($permission->id);
+        }
+        $user->roles()->syncWithoutDetaching($role->id);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -49,45 +61,30 @@ class PolicyTest extends TestCase
         $this->regularUser = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'user']);
     }
 
-    /** @test */
+    /**
+     * @test
+     *
+     * OWN-2026-024 (O-17h) H4 — SUPERSEDED (Owner Gate 2 Option B / H4 requirement 8: no fallback to legacy users.role). Original preserved in docs/audits/UAT-RECOVERY-01/105-o17h-h4-review.md §4.
+     * Original: a users.role-only matrix — super_admin/admin view+create+update+delete true; pm/designer view+create+update true,
+     * delete false; engineer view true only; 'user' nothing. Replaced by the explicit guard: no users.role value authorizes any
+     * document ability; canonical grants do, and deletion additionally needs canonical Owner authority.
+     */
     public function document_policy_allows_proper_access()
     {
         $document = Document::factory()->for($this->tenant, 'tenant')->create();
-        // Super admin can do everything
-        $this->assertTrue($this->superAdmin->can('view', $document));
-        $this->assertTrue($this->superAdmin->can('create', Document::class));
-        $this->assertTrue($this->superAdmin->can('update', $document));
-        $this->assertTrue($this->superAdmin->can('delete', $document));
+        foreach ([$this->superAdmin, $this->admin, $this->pm, $this->designer, $this->engineer, $this->regularUser] as $legacyOnly) {
+            foreach (['view', 'update', 'delete'] as $ability) {
+                $this->assertFalse($legacyOnly->can($ability, $document), "users.role={$legacyOnly->role} {$ability}");
+            }
+            $this->assertFalse($legacyOnly->can('create', Document::class), "users.role={$legacyOnly->role} create");
+        }
 
-        // Admin can do most things
-        $this->assertTrue($this->admin->can('view', $document));
-        $this->assertTrue($this->admin->can('create', Document::class));
-        $this->assertTrue($this->admin->can('update', $document));
-        $this->assertTrue($this->admin->can('delete', $document));
-
-        // PM can view and create
-        $this->assertTrue($this->pm->can('view', $document));
-        $this->assertTrue($this->pm->can('create', Document::class));
-        $this->assertTrue($this->pm->can('update', $document));
-        $this->assertFalse($this->pm->can('delete', $document));
-
-        // Designer can view and create
-        $this->assertTrue($this->designer->can('view', $document));
-        $this->assertTrue($this->designer->can('create', Document::class));
-        $this->assertTrue($this->designer->can('update', $document));
-        $this->assertFalse($this->designer->can('delete', $document));
-
-        // Engineer can only view
-        $this->assertTrue($this->engineer->can('view', $document));
-        $this->assertFalse($this->engineer->can('create', Document::class));
-        $this->assertFalse($this->engineer->can('update', $document));
-        $this->assertFalse($this->engineer->can('delete', $document));
-
-        // Regular user cannot access
-        $this->assertFalse($this->regularUser->can('view', $document));
-        $this->assertFalse($this->regularUser->can('create', Document::class));
-        $this->assertFalse($this->regularUser->can('update', $document));
-        $this->assertFalse($this->regularUser->can('delete', $document));
+        $this->grantCodes($this->pm, ['document.view', 'document.create', 'document.update']);
+        $pm = $this->pm->fresh();
+        $this->assertTrue($pm->can('view', $document));
+        $this->assertTrue($pm->can('create', Document::class));
+        $this->assertTrue($pm->can('update', $document));
+        $this->assertFalse($pm->can('delete', $document), 'deletion needs document.delete and Owner authority');
     }
 
     /** @test */
@@ -175,6 +172,11 @@ class PolicyTest extends TestCase
 
         $user1 = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'admin']);
         $user2 = User::factory()->for($tenant2, 'tenant')->create(['role' => 'admin']);
+        // OWN-2026-024 H4: users.role no longer authorizes; the same canonical grants for both users (assertions unchanged).
+        $this->grantCodes($user1, ['document.view', 'document.update']);
+        $this->grantCodes($user2, ['document.view', 'document.update']);
+        $user1 = $user1->fresh();
+        $user2 = $user2->fresh();
 
         // User 1 can access tenant 1 documents
         $this->assertTrue($user1->can('view', $document1));

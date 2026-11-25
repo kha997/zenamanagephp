@@ -56,6 +56,8 @@ class Kernel extends HttpKernel
         'auth.session' => \App\Http\Middleware\SessionManagementMiddleware::class,
         'tenant.isolation' => \App\Http\Middleware\TenantIsolationMiddleware::class,
         'rbac' => \App\Http\Middleware\RoleBasedAccessControlMiddleware::class,
+        // OWN-2026-024 H2b (D6 safeguards): kill switch + explicit confirmation + audit for destructive / export platform operations.
+        'platform.guarded' => \App\Http\Middleware\GuardedPlatformOperation::class,
         'portal.auth' => \App\Http\Middleware\EnsurePortalAccountAuthenticated::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,

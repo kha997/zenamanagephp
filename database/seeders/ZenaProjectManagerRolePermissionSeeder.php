@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\Rbac\RbacSeedGrants;
 use Illuminate\Database\Seeder;
 
 class ZenaProjectManagerRolePermissionSeeder extends Seeder
@@ -85,11 +86,9 @@ class ZenaProjectManagerRolePermissionSeeder extends Seeder
             return;
         }
 
-        foreach ($lowercaseRoleNames as $lowercaseRoleName) {
-            /** @var Role|null $role */
-            $role = Role::query()->whereRaw('LOWER(name) = ?', [$lowercaseRoleName])->first();
-
-            $role?->permissions()->syncWithoutDetaching($permissionIds);
+        // OWN-2026-024 H2b (D4): single seed grant path — additive, global roles only, never platform.*, never a revoked grant.
+        foreach (RbacSeedGrants::globalRoleIdsNamed($lowercaseRoleNames) as $roleId) {
+            RbacSeedGrants::grantIds($roleId, $permissionIds);
         }
     }
 }

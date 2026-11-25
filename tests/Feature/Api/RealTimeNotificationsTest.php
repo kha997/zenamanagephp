@@ -24,7 +24,8 @@ class RealTimeNotificationsTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin();
+        // OWN-2026-024 H3 fixture: the super_admin role-name bypass is gone; grant exactly the codes these routes are gated on.
+        $this->apiActingAsTenantAdmin([], null, ['notification.view', 'notification.create', 'notification.read', 'notification.mark-all-read', 'notification.stats', 'notification.delete']);
         $this->user = $this->apiFeatureUser;
         $this->tenantId = $this->apiFeatureTenant->id;
     }

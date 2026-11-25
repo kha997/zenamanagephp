@@ -2,6 +2,11 @@
 
 namespace Src\RBAC\Controllers;
 
+use App\Support\Rbac\PermissionRevocations;
+use App\Support\Rbac\RbacProtection;
+use App\Support\Rbac\SecurityAudit;
+use Illuminate\Support\Facades\DB;
+use App\Support\PlatformPermissions;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Models\Role;
@@ -74,6 +79,10 @@ class RoleController
 
         if (empty($request->get('name'))) {
             $errors['name'] = 'Tên role không được để trống';
+        } elseif (RbacProtection::isReservedRoleName((string) $request->get('name'))) {
+            // OWN-2026-024 H2b (D5): seeder alias / Owner / Platform Operator names are reserved — a tenant role carrying one
+            // could otherwise inherit privileged grants or impersonate a privileged role.
+            $errors['name'] = 'Tên vai trò này được hệ thống giữ riêng.';
         }
 
         $scope = $request->get('scope');
@@ -179,6 +188,8 @@ class RoleController
         
         if ($request->has('name') && empty($request->get('name'))) {
             $errors['name'] = 'Tên role không được để trống';
+        } elseif ($request->has('name') && RbacProtection::isReservedRoleName((string) $request->get('name'))) {
+            $errors['name'] = 'Tên vai trò này được hệ thống giữ riêng.'; // OWN-2026-024 H2b (D5)
         }
         
         if ($request->has('scope')) {
@@ -313,6 +324,15 @@ class RoleController
             ], 400);
         }
 
+        // OWN-2026-024 H2a (Owner Gate 2, D1/D6): platform authority is never part of a tenant role and is never granted over
+        // HTTP. Refuse before any write; also refuse to rewrite a role that already holds a platform code (fail closed).
+        if (PlatformPermissions::containsPlatformCode($permissionCodes) || PlatformPermissions::roleHoldsPlatformPermission((string) $role->id)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Quyền nền tảng (platform.*) không thể gán qua quản lý vai trò.'
+            ], 422);
+        }
+
         // Validate permission codes tồn tại, resolve code -> id (BelongsToMany::sync()
         // requires the related model's primary key, not its code — GAP-042 fix, this
         // previously passed codes directly into sync() and silently failed).
@@ -330,7 +350,40 @@ class RoleController
 
         // Sync permissions
         $oldPermissions = $role->permissions->pluck('code')->toArray();
-        $role->permissions()->sync($validIds);
+
+        // OWN-2026-024 H2b (Owner Gate 2, D4/D5): adding or removing a protected code (role.*, permission.*, system.*,
+        // admin.company.manage, ...) needs real canonical Owner authority AND the actor must hold each such code (no escalation
+        // beyond one's own grants). Re-adding a deliberately revoked code needs Owner authority and supersedes the revocation in the
+        // same transaction. Every successful sync is audited in that transaction. Denials persist nothing.
+        $actor = RbacProtection::currentActor();
+        $added = array_values(array_diff($validCodes, $oldPermissions));
+        $removed = array_values(array_diff($oldPermissions, $validCodes));
+        $revokedReadded = array_values(array_filter($added, fn (string $code): bool => PermissionRevocations::isRevoked((string) $role->id, $code)));
+        // OWN-2026-024 H3 (Gate 7 review): lock-out protection, as for durable revocation — with no role-name bypass left, removing
+        // the canonical Owner authority from the Owner role would leave no one able to approve privileged changes.
+        $removesOwnerAuthority = (string) $role->name === RbacProtection::OWNER_ROLE && in_array(RbacProtection::OWNER_AUTHORITY_CODE, $removed, true);
+        if ($removesOwnerAuthority
+            || !RbacProtection::actorMayHandleCodes($actor, array_merge($added, $removed))
+            || ($revokedReadded !== [] && !RbacProtection::hasOwnerAuthority($actor))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không được phép thay đổi quyền nhạy cảm của vai trò này.'
+            ], 403);
+        }
+
+        DB::transaction(function () use ($role, $validIds, $actor, $added, $removed, $revokedReadded, $oldPermissions): void {
+            foreach ($revokedReadded as $code) {
+                PermissionRevocations::supersedeInsideTransaction((string) $role->id, $role->tenant_id === null ? null : (string) $role->tenant_id, (string) $role->name, $code, PermissionRevocations::actorLabel($actor), (string) $actor?->id, 'explicit re-grant via role permission sync');
+            }
+            $role->permissions()->sync(array_fill_keys($validIds, \App\Support\Rbac\RbacSchema::grantSourceAttributes('manual')));
+            if ($actor !== null) {
+                SecurityAudit::record((string) $actor->id, $role->tenant_id === null ? null : (string) $role->tenant_id, 'rbac.role.permissions_synced', 'role', (string) $role->id, PermissionRevocations::actorLabel($actor), [
+                    'role' => (string) $role->name,
+                    'added' => $added,
+                    'removed' => $removed,
+                ], ['permissions' => $oldPermissions]);
+            }
+        });
         $newPermissions = $role->fresh()->permissions->pluck('code')->toArray();
 
         // Phát sự kiện

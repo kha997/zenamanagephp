@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\Rbac\RbacSeedGrants;
 use Illuminate\Database\Seeder;
 
 class ZenaAdminRolePermissionSeeder extends Seeder
@@ -37,7 +38,8 @@ class ZenaAdminRolePermissionSeeder extends Seeder
         }
 
         foreach ($roles as $role) {
-            $role->permissions()->syncWithoutDetaching($permissionIds);
+            // OWN-2026-024 H2b (D4): single seed grant path — additive, global roles only, never platform.*, never a revoked grant.
+            RbacSeedGrants::grantIds((string) $role->id, $permissionIds);
         }
     }
 
@@ -45,6 +47,7 @@ class ZenaAdminRolePermissionSeeder extends Seeder
     {
         $placeholders = implode(',', array_fill(0, count($loweredNames), '?'));
 
-        return Role::whereRaw("LOWER(name) IN ({$placeholders})", $loweredNames)->get();
+        // OWN-2026-024 H2b: global roles only — a tenant role named like an admin alias must never receive these grants.
+        return Role::whereRaw("LOWER(name) IN ({$placeholders})", $loweredNames)->whereNull('tenant_id')->get();
     }
 }

@@ -46,7 +46,9 @@ class V1ProjectAndChangeRequestRoutesTest extends TestCase
     {
         parent::setUp();
         $this->tenant = Tenant::factory()->create();
-        $this->user = $this->createTenantUser($this->tenant);
+        // OWN-2026-024 H3 fixture: the super_admin role-name bypass is gone; grant exactly the codes these routes are gated on.
+        $this->user = $this->createTenantUser($this->tenant, [], null, ['project.update', 'project.delete']);
+        $this->grantThroughTestRole($this->user, ['change_request.create']); // not held by the Owner role (D3)
         $this->headers = array_merge(
             $this->apiHeadersForTenant((string) $this->tenant->id),
             ['Authorization' => 'Bearer ' . $this->apiLoginToken($this->user, $this->tenant)]

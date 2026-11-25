@@ -23,6 +23,9 @@ final class AdminClearCacheFailsClosedTest extends TestCase
         $otherTenant = Tenant::factory()->create();
         $tenant = Tenant::factory()->create();
         $superAdmin = $this->createTenantUser($tenant, ['email' => 'root@gap055.example.com'], ['super_admin']);
+        // OWN-2026-024 H3: host maintenance is reached only by a Platform Operator (explicit platform code + active ledger row),
+        // no longer by the role name super_admin. The refusal assertions below are unchanged.
+        $this->provisionTestPlatformOperator($superAdmin, ['platform.maintenance.execute']);
 
         $limiterKey = 'zena-login|victim@other-tenant.example.com';
         for ($i = 0; $i < 5; $i++) {

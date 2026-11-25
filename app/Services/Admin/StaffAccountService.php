@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\Rbac\RbacProtection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -39,6 +40,11 @@ final class StaffAccountService
             throw new StaffAccountException('Cần nhập họ tên.');
         }
         $role = $this->canonicalRole($roleName);
+        // OWN-2026-024 H2b (Owner Gate 2, D5): creating an Owner from the web needs real canonical Owner authority in the same
+        // company. The server console (production:user, $actor === null) remains the bootstrap path.
+        if ($role->name === self::OWNER_ROLE && $actor !== null) {
+            $this->guardOwnerAuthority($actor, (string) $tenant->id);
+        }
         if (User::query()->where('email', $email)->exists()) {
             throw new StaffAccountException('Email này đã có tài khoản.');
         }
@@ -81,6 +87,14 @@ final class StaffAccountService
         if ($current === [$role->name]) {
             return;
         }
+        // OWN-2026-024 H2b (D5): any change that grants or removes the Owner role needs real canonical Owner authority in the
+        // same company, and nobody promotes themselves.
+        if ($role->name === self::OWNER_ROLE || $this->isOwner($user)) {
+            $this->guardOwnerAuthority($actor, (string) $user->tenant_id);
+            if ($role->name === self::OWNER_ROLE && (string) $user->id === (string) $actor->id) {
+                throw new StaffAccountException('Bạn không thể tự nâng mình lên Owner.');
+            }
+        }
         if ($this->isOwner($user) && $role->name !== self::OWNER_ROLE) {
             if ((string) $user->id === (string) $actor->id) {
                 throw new StaffAccountException('Bạn không thể tự hạ vai trò của chính mình.');
@@ -103,6 +117,7 @@ final class StaffAccountService
             return;
         }
         if ($this->isOwner($user)) {
+            $this->guardOwnerAuthority($actor, (string) $user->tenant_id); // OWN-2026-024 H2b (D5)
             $this->guardLastOwner($user);
         }
 
@@ -151,6 +166,14 @@ final class StaffAccountService
         }
 
         return $role;
+    }
+
+    /** OWN-2026-024 H2b (D5): canonical Owner authority (role + real admin.company.manage grant) in the same company. */
+    private function guardOwnerAuthority(User $actor, string $tenantId): void
+    {
+        if (!RbacProtection::hasOwnerAuthority($actor) || (string) $actor->tenant_id !== $tenantId) {
+            throw new StaffAccountException('Chỉ Owner của công ty mới được bổ nhiệm hoặc thay đổi Owner.');
+        }
     }
 
     /**

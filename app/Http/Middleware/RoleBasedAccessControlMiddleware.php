@@ -109,10 +109,9 @@ class RoleBasedAccessControlMiddleware
      */
     private function checkAccess($user, string $roleOrPermission, Request $request, ?string $projectParam = null): bool
     {
-        // Super admin has access to everything
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
+        // OWN-2026-024 (O-17h) H3, Owner Gate 2 Option B: no role-name short-circuit. The role named `super_admin` (the company
+        // Owner) is authorized exactly like every other role: by its canonical, revocable grants (User::hasPermission, which
+        // also applies durable revocations and, for platform.* codes, the active Platform Operator ledger).
 
         // Check for specific roles
         if ($this->isRole($roleOrPermission)) {

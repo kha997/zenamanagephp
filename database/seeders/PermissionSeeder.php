@@ -6,6 +6,8 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\PlatformPermissions;
+use App\Support\Rbac\RbacSeedGrants;
 use Illuminate\Database\Seeder;
 
 /**
@@ -100,14 +102,16 @@ class PermissionSeeder extends Seeder
      */
     private function assignPermissionsToRoles(): void
     {
-        $adminRole = Role::where('name', 'System Admin')->first();
-        $managerRole = Role::where('name', 'Project Manager')->first();
-        $memberRole = Role::where('name', 'Project Member')->first();
+        // OWN-2026-024 H2b: global roles only (a tenant role can never borrow these names' grants).
+        $adminRole = Role::where('name', 'System Admin')->whereNull('tenant_id')->first();
+        $managerRole = Role::where('name', 'Project Manager')->whereNull('tenant_id')->first();
+        $memberRole = Role::where('name', 'Project Member')->whereNull('tenant_id')->first();
 
         if ($adminRole) {
-            // Admin có tất cả permissions
-            $allPermissions = Permission::all();
-            $adminRole->permissions()->sync($allPermissions->pluck('id'));
+            // Admin có tất cả permissions — EXCEPT the platform namespace (OWN-2026-024 D1/D6: platform codes are never part of a
+            // tenant or admin role; only a server-provisioned Platform Operator may hold them).
+            $allPermissions = PlatformPermissions::excludeFrom(Permission::query())->get();
+            RbacSeedGrants::grantIds((string) $adminRole->id, $allPermissions->pluck('id')); // OWN-2026-024 H2b (D4): single seed grant path — additive, global roles only, never platform.*, never a revoked grant.
         }
 
         if ($managerRole) {
@@ -126,7 +130,7 @@ class PermissionSeeder extends Seeder
                 'interaction_log.create', 'interaction_log.read', 'interaction_log.approve',
             ])->get();
             // O-18 (Owner, 2026-11-24): additive — re-seeding must never delete grants an administrator added by hand.
-            $managerRole->permissions()->syncWithoutDetaching($managerPermissions->pluck('id'));
+            RbacSeedGrants::grantIds((string) $managerRole->id, $managerPermissions->pluck('id'));
         }
 
         if ($memberRole) {
@@ -152,7 +156,7 @@ class PermissionSeeder extends Seeder
                 // webhook.view is still intentionally not granted (admin-scope integration configuration).
             ])->get();
             // O-18: additive — re-seeding must never delete grants an administrator added by hand.
-            $memberRole->permissions()->syncWithoutDetaching($memberPermissions->pluck('id'));
+            RbacSeedGrants::grantIds((string) $memberRole->id, $memberPermissions->pluck('id'));
         }
     }
 }

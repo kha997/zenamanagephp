@@ -34,6 +34,11 @@ class DocumentAssignApproverPolicyTest extends TestCase
         self::assertTrue($this->policy->assignApprover($pm, $document));
     }
 
+    /**
+     * OWN-2026-024 (O-17h) H4 — SUPERSEDED (Owner Gate 2 Option B / H4 requirement 8: no fallback to legacy users.role). Original preserved in docs/audits/UAT-RECOVERY-01/105-o17h-h4-review.md §4.
+     * Original: a user holding a role NAMED 'admin' (no grants) asserted true. GAP-033's "tenant Admin" is now the canonical
+     * Owner authority (Owner role + revocable admin.company.manage); the bare role name 'admin' is denied.
+     */
     public function test_admin_role_may_assign_approver_even_if_not_the_projects_manager(): void
     {
         $tenant = Tenant::factory()->create();
@@ -43,7 +48,14 @@ class DocumentAssignApproverPolicyTest extends TestCase
         $project = Project::factory()->create(['tenant_id' => $tenant->id, 'pm_id' => $otherPm->id]);
         $document = Document::factory()->create(['tenant_id' => $tenant->id, 'project_id' => $project->id]);
 
-        self::assertTrue($this->policy->assignApprover($admin, $document));
+        self::assertFalse($this->policy->assignApprover($admin, $document), 'the role NAME admin is not Owner authority');
+
+        $owner = User::factory()->create(['tenant_id' => $tenant->id, 'is_active' => true]);
+        $ownerRole = \App\Models\Role::query()->firstOrCreate(['name' => 'super_admin'], ['scope' => 'system', 'is_active' => true]);
+        $authority = \App\Models\Permission::firstOrCreate(['code' => 'admin.company.manage'], ['name' => 'admin.company.manage', 'module' => 'admin', 'action' => 'company.manage', 'description' => 'test']);
+        $ownerRole->permissions()->syncWithoutDetaching([$authority->id]);
+        $owner->roles()->attach($ownerRole);
+        self::assertTrue($this->policy->assignApprover($owner->fresh(), $document), 'canonical Owner authority, not the project PM');
     }
 
     public function test_designer_role_with_document_update_permission_may_not_assign_approver(): void

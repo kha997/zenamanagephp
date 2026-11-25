@@ -1,0 +1,155 @@
+# O-17h controlled probes — synthetic SQLite DB (RefreshDatabase), seeded with production:rbac, head c94ff67c0, 2026-11-24. Never run against staging/production.
+# actors (tenant A): nobody=zero-permission custom role (control); member=seeded Project Member; legacy=no role rows, users.role=super_admin; zeroSA=the single global super_admin role with its 222 grants detached for these probes only (restored after); realSA=seeded super_admin with 222 grants.
+# changed=persisted side effect on the probed row/table; audit_delta=new audit_logs rows. Response bodies are summarised (error code / success); environment values (e.g. cache server stats) are not recorded. Probes run per actor in the order zeroSA, legacy, nobody, member, realSA (E1 by zeroSA already gave the victim the super_admin role, so later E1 rows show no change).
+actor	probe	method	uri	status	changed	before	after	audit_delta	response
+zeroSA	setup	-	-	-	-	super_admin grants detached=222	remaining=0	-	-
+zeroSA	R1 read contracts (own tenant)	GET	api/v1/projects/{id}/contracts	403	None	null	null	0	error E403.AUTHORIZATION
+zeroSA	R2 read BOQ list (own tenant)	GET	api/zena/boqs	403	None	null	null	0	error E403.AUTHORIZATION
+zeroSA	R3 read roles catalogue	GET	api/v1/rbac/roles	200	None	null	null	0	success
+zeroSA	R4 read other user effective permissions	GET	api/v1/rbac/users/{id}/effective-permissions	200	None	null	null	0	success
+zeroSA	R5 rbac:admin dashboard stats	GET	api/admin/dashboard/stats	200	None	null	null	0	success
+zeroSA	R6 rbac:admin cache stats	GET	api/cache/stats	200	None	null	null	0	success
+zeroSA	R7 read CRM leads	GET	api/zena/crm/leads	403	None	null	null	0	error E403.AUTHORIZATION
+zeroSA	R8 rbac:admin web admin/tenants page	GET	admin/tenants	302	None	null	null	0	redirect /app/admin/company
+zeroSA	XT1 read tenant-B project contracts	GET	api/v1/projects/{id}/contracts	404	None	null	null	0	error E404.NOT_FOUND
+zeroSA	XT2 read tenant-B contract	GET	api/v1/projects/{id}/contracts/{id}	404	None	null	null	0	error E404.NOT_FOUND
+zeroSA	XT3 read tenant-B BOQ	GET	api/zena/boqs/{id}	404	None	null	null	0	error E404.NOT_FOUND
+zeroSA	XT4 read tenant-B user permissions	GET	api/v1/rbac/users/{id}/effective-permissions	404	None	null	null	0	error E404.NOT_FOUND
+zeroSA	XT5 CRM leads with X-Tenant-ID of B	GET	api/zena/crm/leads	403	None	null	null	0	error TENANT_INVALID
+zeroSA	XT6 delete tenant-B BOQ	DELETE	api/zena/boqs/{id}	404	False	{"exists": true}	{"exists": true}	0	error E404.NOT_FOUND
+zeroSA	XT7 update tenant-B contract	PUT	api/v1/projects/{id}/contracts/{id}	404	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error E404.NOT_FOUND
+zeroSA	W1 create CRM lead	POST	api/zena/crm/leads	403	False	0	0	0	error E403.AUTHORIZATION
+zeroSA	W2 update own-tenant contract	PUT	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error E403.AUTHORIZATION
+zeroSA	D1 delete own-tenant BOQ	DELETE	api/zena/boqs/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+zeroSA	D2 delete own-tenant contract	DELETE	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+zeroSA	E1 assign real super_admin role to another user	POST	api/v1/rbac/assignments/users/{id}/roles	200	True	["{id}"]	["{id}", "{id}"]	0	success
+zeroSA	E2 create role	POST	api/v1/rbac/roles	201	True	6	7	0	success
+zeroSA	E3 grant role.assign to the actor's own zero super_admin role	POST	api/v1/rbac/roles/{id}/permissions	404	False	0	0	0	error E404.NOT_FOUND
+zeroSA	E4 create permission	POST	api/v1/rbac/permissions	201	True	248	249	0	success
+zeroSA	E5 web admin: set another user role to super_admin	POST	app/admin/users/{id}/role	302	False	2	2	0	redirect /app/admin/users
+zeroSA	WF1 approve change request	POST	api/zena/change-requests/{id}/approve	200	True	{"exists": true, "deleted_at": false, "status": "submitted"}	{"exists": true, "deleted_at": false, "status": "approved"}	1	success
+zeroSA	DOC1 update own-tenant document (policy role-name path)	PUT	api/documents/{id}	200	True	{"exists": true, "deleted_at": false, "title": "orig"}	{"exists": true, "deleted_at": false, "title": "o17h-doc"}	0	success
+zeroSA	DOC2 delete own-tenant document (policy role-name path)	DELETE	api/documents/{id}	200	True	{"exists": true, "deleted_at": false}	{"exists": true, "deleted_at": true}	0	success
+zeroSA	P1 parameterless rbac: user preferences	GET	api/user-preferences	200	None	null	null	0	success
+zeroSA	P2 parameterless rbac: users list (in-controller user.view)	GET	api/users	403	None	null	null	0	error E403.AUTHORIZATION
+zeroSA	WF2 v1 task assignment (task.assign)	POST	api/v1/task-assignments	422	False	0	0	0	error E422.VALIDATION
+legacy	R1 read contracts (own tenant)	GET	api/v1/projects/{id}/contracts	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	R2 read BOQ list (own tenant)	GET	api/zena/boqs	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	R3 read roles catalogue	GET	api/v1/rbac/roles	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	R4 read other user effective permissions	GET	api/v1/rbac/users/{id}/effective-permissions	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	R5 rbac:admin dashboard stats	GET	api/admin/dashboard/stats	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	R6 rbac:admin cache stats	GET	api/cache/stats	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	R7 read CRM leads	GET	api/zena/crm/leads	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	R8 rbac:admin web admin/tenants page	GET	admin/tenants	302	None	null	null	0	redirect /admin/tenants
+legacy	XT1 read tenant-B project contracts	GET	api/v1/projects/{id}/contracts	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	XT2 read tenant-B contract	GET	api/v1/projects/{id}/contracts/{id}	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	XT3 read tenant-B BOQ	GET	api/zena/boqs/{id}	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	XT4 read tenant-B user permissions	GET	api/v1/rbac/users/{id}/effective-permissions	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	XT5 CRM leads with X-Tenant-ID of B	GET	api/zena/crm/leads	403	None	null	null	0	error TENANT_INVALID
+legacy	XT6 delete tenant-B BOQ	DELETE	api/zena/boqs/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+legacy	XT7 update tenant-B contract	PUT	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error E403.AUTHORIZATION
+legacy	W1 create CRM lead	POST	api/zena/crm/leads	403	False	0	0	0	error E403.AUTHORIZATION
+legacy	W2 update own-tenant contract	PUT	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error E403.AUTHORIZATION
+legacy	D1 delete own-tenant BOQ	DELETE	api/zena/boqs/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+legacy	D2 delete own-tenant contract	DELETE	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+legacy	E1 assign real super_admin role to another user	POST	api/v1/rbac/assignments/users/{id}/roles	403	False	["{id}", "{id}"]	["{id}", "{id}"]	0	error E403.AUTHORIZATION
+legacy	E2 create role	POST	api/v1/rbac/roles	403	False	7	7	0	error E403.AUTHORIZATION
+legacy	E3 grant role.assign to the actor's own zero super_admin role	POST	api/v1/rbac/roles/{id}/permissions	403	False	222	222	0	error E403.AUTHORIZATION
+legacy	E4 create permission	POST	api/v1/rbac/permissions	403	False	249	249	0	error E403.AUTHORIZATION
+legacy	E5 web admin: set another user role to super_admin	POST	app/admin/users/{id}/role	302	False	2	2	0	redirect /admin/tenants
+legacy	WF1 approve change request	POST	api/zena/change-requests/{id}/approve	403	False	{"exists": true, "deleted_at": false, "status": "submitted"}	{"exists": true, "deleted_at": false, "status": "submitted"}	0	error E403.AUTHORIZATION
+legacy	DOC1 update own-tenant document (policy role-name path)	PUT	api/documents/{id}	403	False	{"exists": true, "deleted_at": false, "title": "orig"}	{"exists": true, "deleted_at": false, "title": "orig"}	0	error E403.AUTHORIZATION
+legacy	DOC2 delete own-tenant document (policy role-name path)	DELETE	api/documents/{id}	403	False	{"exists": true, "deleted_at": false}	{"exists": true, "deleted_at": false}	0	error E403.AUTHORIZATION
+legacy	P1 parameterless rbac: user preferences	GET	api/user-preferences	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	P2 parameterless rbac: users list (in-controller user.view)	GET	api/users	403	None	null	null	0	error E403.AUTHORIZATION
+legacy	WF2 v1 task assignment (task.assign)	POST	api/v1/task-assignments	403	False	0	0	0	error E403.AUTHORIZATION
+nobody	R1 read contracts (own tenant)	GET	api/v1/projects/{id}/contracts	403	None	null	null	0	error RBAC_ACCESS_DENIED
+nobody	R2 read BOQ list (own tenant)	GET	api/zena/boqs	403	None	null	null	0	error E403.AUTHORIZATION
+nobody	R3 read roles catalogue	GET	api/v1/rbac/roles	403	None	null	null	0	error E403.AUTHORIZATION
+nobody	R4 read other user effective permissions	GET	api/v1/rbac/users/{id}/effective-permissions	403	None	null	null	0	error E403.AUTHORIZATION
+nobody	R5 rbac:admin dashboard stats	GET	api/admin/dashboard/stats	403	None	null	null	0	error E403.AUTHORIZATION
+nobody	R6 rbac:admin cache stats	GET	api/cache/stats	403	None	null	null	0	error E403.AUTHORIZATION
+nobody	R7 read CRM leads	GET	api/zena/crm/leads	403	None	null	null	0	error E403.AUTHORIZATION
+nobody	R8 rbac:admin web admin/tenants page	GET	admin/tenants	302	None	null	null	0	redirect /admin/tenants
+nobody	XT1 read tenant-B project contracts	GET	api/v1/projects/{id}/contracts	403	None	null	null	0	error RBAC_ACCESS_DENIED
+nobody	XT2 read tenant-B contract	GET	api/v1/projects/{id}/contracts/{id}	403	None	null	null	0	error RBAC_ACCESS_DENIED
+nobody	XT3 read tenant-B BOQ	GET	api/zena/boqs/{id}	403	None	null	null	0	error E403.AUTHORIZATION
+nobody	XT4 read tenant-B user permissions	GET	api/v1/rbac/users/{id}/effective-permissions	403	None	null	null	0	error E403.AUTHORIZATION
+nobody	XT5 CRM leads with X-Tenant-ID of B	GET	api/zena/crm/leads	403	None	null	null	0	error TENANT_INVALID
+nobody	XT6 delete tenant-B BOQ	DELETE	api/zena/boqs/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+nobody	XT7 update tenant-B contract	PUT	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error RBAC_ACCESS_DENIED
+nobody	W1 create CRM lead	POST	api/zena/crm/leads	403	False	0	0	0	error E403.AUTHORIZATION
+nobody	W2 update own-tenant contract	PUT	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error RBAC_ACCESS_DENIED
+nobody	D1 delete own-tenant BOQ	DELETE	api/zena/boqs/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+nobody	D2 delete own-tenant contract	DELETE	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true}	{"exists": true}	0	error RBAC_ACCESS_DENIED
+nobody	E1 assign real super_admin role to another user	POST	api/v1/rbac/assignments/users/{id}/roles	403	False	["{id}", "{id}"]	["{id}", "{id}"]	0	error E403.AUTHORIZATION
+nobody	E2 create role	POST	api/v1/rbac/roles	403	False	7	7	0	error E403.AUTHORIZATION
+nobody	E3 grant role.assign to the actor's own zero super_admin role	POST	api/v1/rbac/roles/{id}/permissions	403	False	222	222	0	error E403.AUTHORIZATION
+nobody	E4 create permission	POST	api/v1/rbac/permissions	403	False	249	249	0	error E403.AUTHORIZATION
+nobody	E5 web admin: set another user role to super_admin	POST	app/admin/users/{id}/role	302	False	2	2	0	redirect /admin/tenants
+nobody	WF1 approve change request	POST	api/zena/change-requests/{id}/approve	403	False	{"exists": true, "deleted_at": false, "status": "submitted"}	{"exists": true, "deleted_at": false, "status": "submitted"}	0	error E403.AUTHORIZATION
+nobody	DOC1 update own-tenant document (policy role-name path)	PUT	api/documents/{id}	403	False	{"exists": true, "deleted_at": false, "title": "orig"}	{"exists": true, "deleted_at": false, "title": "orig"}	0	error RBAC_ACCESS_DENIED
+nobody	DOC2 delete own-tenant document (policy role-name path)	DELETE	api/documents/{id}	403	False	{"exists": true, "deleted_at": false}	{"exists": true, "deleted_at": false}	0	error RBAC_ACCESS_DENIED
+nobody	P1 parameterless rbac: user preferences	GET	api/user-preferences	403	None	null	null	0	error RBAC_ACCESS_DENIED
+nobody	P2 parameterless rbac: users list (in-controller user.view)	GET	api/users	403	None	null	null	0	error RBAC_ACCESS_DENIED
+nobody	WF2 v1 task assignment (task.assign)	POST	api/v1/task-assignments	403	False	0	0	0	error E403.AUTHORIZATION
+member	R1 read contracts (own tenant)	GET	api/v1/projects/{id}/contracts	403	None	null	null	0	error RBAC_ACCESS_DENIED
+member	R2 read BOQ list (own tenant)	GET	api/zena/boqs	403	None	null	null	0	error E403.AUTHORIZATION
+member	R3 read roles catalogue	GET	api/v1/rbac/roles	403	None	null	null	0	error E403.AUTHORIZATION
+member	R4 read other user effective permissions	GET	api/v1/rbac/users/{id}/effective-permissions	403	None	null	null	0	error E403.AUTHORIZATION
+member	R5 rbac:admin dashboard stats	GET	api/admin/dashboard/stats	403	None	null	null	0	error E403.AUTHORIZATION
+member	R6 rbac:admin cache stats	GET	api/cache/stats	403	None	null	null	0	error E403.AUTHORIZATION
+member	R7 read CRM leads	GET	api/zena/crm/leads	403	None	null	null	0	error E403.AUTHORIZATION
+member	R8 rbac:admin web admin/tenants page	GET	admin/tenants	302	None	null	null	0	redirect /admin/tenants
+member	XT1 read tenant-B project contracts	GET	api/v1/projects/{id}/contracts	403	None	null	null	0	error RBAC_ACCESS_DENIED
+member	XT2 read tenant-B contract	GET	api/v1/projects/{id}/contracts/{id}	403	None	null	null	0	error RBAC_ACCESS_DENIED
+member	XT3 read tenant-B BOQ	GET	api/zena/boqs/{id}	403	None	null	null	0	error E403.AUTHORIZATION
+member	XT4 read tenant-B user permissions	GET	api/v1/rbac/users/{id}/effective-permissions	403	None	null	null	0	error E403.AUTHORIZATION
+member	XT5 CRM leads with X-Tenant-ID of B	GET	api/zena/crm/leads	403	None	null	null	0	error TENANT_INVALID
+member	XT6 delete tenant-B BOQ	DELETE	api/zena/boqs/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+member	XT7 update tenant-B contract	PUT	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error RBAC_ACCESS_DENIED
+member	W1 create CRM lead	POST	api/zena/crm/leads	403	False	0	0	0	error E403.AUTHORIZATION
+member	W2 update own-tenant contract	PUT	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error RBAC_ACCESS_DENIED
+member	D1 delete own-tenant BOQ	DELETE	api/zena/boqs/{id}	403	False	{"exists": true}	{"exists": true}	0	error E403.AUTHORIZATION
+member	D2 delete own-tenant contract	DELETE	api/v1/projects/{id}/contracts/{id}	403	False	{"exists": true}	{"exists": true}	0	error RBAC_ACCESS_DENIED
+member	E1 assign real super_admin role to another user	POST	api/v1/rbac/assignments/users/{id}/roles	403	False	["{id}", "{id}"]	["{id}", "{id}"]	0	error E403.AUTHORIZATION
+member	E2 create role	POST	api/v1/rbac/roles	403	False	7	7	0	error E403.AUTHORIZATION
+member	E3 grant role.assign to the actor's own zero super_admin role	POST	api/v1/rbac/roles/{id}/permissions	403	False	222	222	0	error E403.AUTHORIZATION
+member	E4 create permission	POST	api/v1/rbac/permissions	403	False	249	249	0	error E403.AUTHORIZATION
+member	E5 web admin: set another user role to super_admin	POST	app/admin/users/{id}/role	302	False	2	2	0	redirect /admin/tenants
+member	WF1 approve change request	POST	api/zena/change-requests/{id}/approve	403	False	{"exists": true, "deleted_at": false, "status": "submitted"}	{"exists": true, "deleted_at": false, "status": "submitted"}	0	error E403.AUTHORIZATION
+member	DOC1 update own-tenant document (policy role-name path)	PUT	api/documents/{id}	403	False	{"exists": true, "deleted_at": false, "title": "orig"}	{"exists": true, "deleted_at": false, "title": "orig"}	0	error RBAC_ACCESS_DENIED
+member	DOC2 delete own-tenant document (policy role-name path)	DELETE	api/documents/{id}	403	False	{"exists": true, "deleted_at": false}	{"exists": true, "deleted_at": false}	0	error RBAC_ACCESS_DENIED
+member	P1 parameterless rbac: user preferences	GET	api/user-preferences	403	None	null	null	0	error RBAC_ACCESS_DENIED
+member	P2 parameterless rbac: users list (in-controller user.view)	GET	api/users	403	None	null	null	0	error RBAC_ACCESS_DENIED
+member	WF2 v1 task assignment (task.assign)	POST	api/v1/task-assignments	403	False	0	0	0	error E403.AUTHORIZATION
+realSA	R1 read contracts (own tenant)	GET	api/v1/projects/{id}/contracts	200	None	null	null	0	success
+realSA	R2 read BOQ list (own tenant)	GET	api/zena/boqs	200	None	null	null	0	success
+realSA	R3 read roles catalogue	GET	api/v1/rbac/roles	200	None	null	null	0	success
+realSA	R4 read other user effective permissions	GET	api/v1/rbac/users/{id}/effective-permissions	200	None	null	null	0	success
+realSA	R5 rbac:admin dashboard stats	GET	api/admin/dashboard/stats	200	None	null	null	0	success
+realSA	R6 rbac:admin cache stats	GET	api/cache/stats	200	None	null	null	0	success
+realSA	R7 read CRM leads	GET	api/zena/crm/leads	200	None	null	null	0	success
+realSA	R8 rbac:admin web admin/tenants page	GET	admin/tenants	302	None	null	null	0	redirect /app/admin/company
+realSA	XT1 read tenant-B project contracts	GET	api/v1/projects/{id}/contracts	404	None	null	null	0	error E404.NOT_FOUND
+realSA	XT2 read tenant-B contract	GET	api/v1/projects/{id}/contracts/{id}	404	None	null	null	0	error E404.NOT_FOUND
+realSA	XT3 read tenant-B BOQ	GET	api/zena/boqs/{id}	404	None	null	null	0	error E404.NOT_FOUND
+realSA	XT4 read tenant-B user permissions	GET	api/v1/rbac/users/{id}/effective-permissions	404	None	null	null	0	error E404.NOT_FOUND
+realSA	XT5 CRM leads with X-Tenant-ID of B	GET	api/zena/crm/leads	403	None	null	null	0	error TENANT_INVALID
+realSA	XT6 delete tenant-B BOQ	DELETE	api/zena/boqs/{id}	404	False	{"exists": true}	{"exists": true}	0	error E404.NOT_FOUND
+realSA	XT7 update tenant-B contract	PUT	api/v1/projects/{id}/contracts/{id}	404	False	{"exists": true, "title": "orig"}	{"exists": true, "title": "orig"}	0	error E404.NOT_FOUND
+realSA	W1 create CRM lead	POST	api/zena/crm/leads	201	True	0	1	0	success
+realSA	W2 update own-tenant contract	PUT	api/v1/projects/{id}/contracts/{id}	200	True	{"exists": true, "title": "orig"}	{"exists": true, "title": "o17h-w2"}	0	success
+realSA	D1 delete own-tenant BOQ	DELETE	api/zena/boqs/{id}	200	True	{"exists": true}	null	0	success
+realSA	D2 delete own-tenant contract	DELETE	api/v1/projects/{id}/contracts/{id}	200	True	{"exists": true}	null	0	success
+realSA	E1 assign real super_admin role to another user	POST	api/v1/rbac/assignments/users/{id}/roles	200	False	["{id}", "{id}"]	["{id}", "{id}"]	0	success
+realSA	E2 create role	POST	api/v1/rbac/roles	201	True	7	8	0	success
+realSA	E3 grant role.assign to the actor's own zero super_admin role	POST	api/v1/rbac/roles/{id}/permissions	404	False	222	222	0	error E404.NOT_FOUND
+realSA	E4 create permission	POST	api/v1/rbac/permissions	400	False	249	249	0	error E400.BAD_REQUEST
+realSA	E5 web admin: set another user role to super_admin	POST	app/admin/users/{id}/role	302	True	2	1	1	redirect /app/admin/users
+realSA	WF1 approve change request	POST	api/zena/change-requests/{id}/approve	200	True	{"exists": true, "deleted_at": false, "status": "submitted"}	{"exists": true, "deleted_at": false, "status": "approved"}	1	success
+realSA	DOC1 update own-tenant document (policy role-name path)	PUT	api/documents/{id}	200	True	{"exists": true, "deleted_at": false, "title": "orig"}	{"exists": true, "deleted_at": false, "title": "o17h-doc"}	0	success
+realSA	DOC2 delete own-tenant document (policy role-name path)	DELETE	api/documents/{id}	200	True	{"exists": true, "deleted_at": false}	{"exists": true, "deleted_at": true}	0	success
+realSA	P1 parameterless rbac: user preferences	GET	api/user-preferences	200	None	null	null	0	success
+realSA	P2 parameterless rbac: users list (in-controller user.view)	GET	api/users	200	None	null	null	0	success
+realSA	WF2 v1 task assignment (task.assign)	POST	api/v1/task-assignments	422	False	0	0	0	error E422.VALIDATION

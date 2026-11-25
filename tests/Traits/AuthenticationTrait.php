@@ -8,6 +8,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\PlatformPermissions;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -182,6 +183,22 @@ trait AuthenticationTrait
         );
 
         $role->permissions()->syncWithoutDetaching($permission->id);
+
+        // OWN-2026-024 H2a: the host-console routes this persona exercises are no longer gated on the non-permission string
+        // `rbac:admin` but on explicit platform.* codes. This TEST persona stands for a provisioned Platform Operator, so it gets
+        // those codes explicitly here (test fixture only — no seeder or production role ever grants them).
+        foreach (PlatformPermissions::CATALOGUE as $code => $definition) {
+            $platformPermission = Permission::firstOrCreate(
+                ['code' => $code],
+                ['name' => $code, 'module' => 'platform', 'action' => $definition['action'], 'description' => $definition['description']]
+            );
+            $role->permissions()->syncWithoutDetaching($platformPermission->id);
+        }
+        // OWN-2026-024 H2b (D6): platform authority also needs an ACTIVE operator ledger row (server-provisioned in real life).
+        \Illuminate\Support\Facades\DB::table('platform_operators')->insertOrIgnore([
+            'id' => (string) Str::ulid(), 'user_id' => (string) $user->id, 'granted_by_actor' => 'test-fixture', 'reason' => 'test operator persona',
+            'approval_reference' => 'test', 'granted_at' => now(), 'active_key' => (string) $user->id, 'created_at' => now(), 'updated_at' => now(),
+        ]);
         $user->roles()->syncWithoutDetaching($role->id);
 
         return $user;

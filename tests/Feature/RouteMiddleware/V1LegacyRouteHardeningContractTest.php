@@ -22,7 +22,9 @@ class V1LegacyRouteHardeningContractTest extends TestCase
     private const EXPECTED_STACK = [
         'auth',
         'tenant.isolation',
-        'rbac:admin',
+        // OWN-2026-024 H2a: was 'rbac:admin' (not a permission; only the legacy super_admin short-circuit passed it). These
+        // host-console routes must now carry an explicit platform.* permission gate.
+        'rbac:platform.*',
         'input.sanitization',
         'error.envelope',
     ];
@@ -70,6 +72,13 @@ class V1LegacyRouteHardeningContractTest extends TestCase
             'tenant_id' => $tenant->id,
         ]);
         $admin->assignRole('super_admin');
+        // OWN-2026-024 H3: this host-console route is gated on platform.ops.view; the role name no longer passes it, so the actor
+        // is a test Platform Operator (explicit code + active ledger row). The envelope assertions below are unchanged.
+        $opsView = \App\Models\Permission::firstOrCreate(['code' => 'platform.ops.view'], ['name' => 'platform.ops.view', 'module' => 'platform', 'action' => 'ops.view', 'description' => 'test']);
+        $operatorRole = \App\Models\Role::firstOrCreate(['name' => 'o17h-h3-platform-operator-fixture'], ['scope' => 'custom', 'is_active' => true]);
+        $operatorRole->permissions()->syncWithoutDetaching([$opsView->id]);
+        $admin->roles()->syncWithoutDetaching([$operatorRole->id]);
+        \Illuminate\Support\Facades\DB::table('platform_operators')->insert(['id' => (string) Str::ulid(), 'user_id' => (string) $admin->id, 'granted_by_actor' => 'test-fixture', 'reason' => 'H3 test operator', 'approval_reference' => 'test', 'granted_at' => now(), 'active_key' => (string) $admin->id, 'created_at' => now(), 'updated_at' => now()]);
 
         $response = $this->actingAs($admin)
             ->withHeaders([
@@ -167,6 +176,16 @@ class V1LegacyRouteHardeningContractTest extends TestCase
      */
     private function hasMiddleware(array $middleware, string $required): bool
     {
+        if ($required === 'rbac:platform.*') {
+            foreach ($middleware as $entry) {
+                if (Str::startsWith($entry, ['rbac:platform.', 'App\\Http\\Middleware\\RoleBasedAccessControlMiddleware:platform.'])) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         $aliases = match ($required) {
             'auth' => ['auth', 'auth:sanctum', 'App\\Http\\Middleware\\Authenticate', 'Illuminate\\Auth\\Middleware\\Authenticate'],
             'tenant.isolation' => ['tenant.isolation', 'App\\Http\\Middleware\\TenantIsolationMiddleware'],

@@ -122,8 +122,12 @@ class UatRecovery03DocumentPolicyAlignmentTest extends TestCase
             'Project Manager (DB role only)' => [['Project Manager', null, 'A'], ['view' => false, 'download' => false, 'update' => true, 'approve' => true, 'assignApprover' => false, 'delete' => false]],
             'Project Member (DB role only)' => [['Project Member', null, 'A'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
             'No role at all' => [[null, null, 'A'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
-            'Legacy admin value, no DB role' => [[null, 'admin', 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => false, 'assignApprover' => true, 'delete' => true]],
-            'Legacy designer value, no DB role' => [[null, 'designer', 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
+            // OWN-2026-024 (O-17h) H4 — SUPERSEDED by Owner Gate 2 Option B / H4 ("no fallback to legacy users.role"): these two rows
+            // asserted the legacy users.role bypass itself (originally admin => view/download/update/assignApprover/delete true;
+            // designer => view/download/update true; preserved in docs/audits/UAT-RECOVERY-01/105-o17h-h4-review.md §4). They are
+            // replaced by the explicit security guard below: a users.role value without canonical grants authorizes nothing.
+            'Legacy admin value, no DB role' => [[null, 'admin', 'A'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
+            'Legacy designer value, no DB role' => [[null, 'designer', 'A'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
             'Cross-tenant System Admin' => [['System Admin', 'admin', 'B'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
             'Cross-tenant Project Manager' => [['Project Manager', 'pm', 'B'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
         ];

@@ -34,7 +34,7 @@ class IntegrationTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin([], null, ['task.create', 'change-request.apply']); // O-17/CB-4 fixture (UAT-RECOVERY 06): canonical change-request.apply; S4c fixture: task creation requires the canonical task.create permission (the route gate is stubbed in this suite)
+        $this->apiActingAsTenantAdmin([], null, ['task.create', 'change-request.apply', 'rfi.create', 'rfi.assign', 'submittal.review', 'change-request.submit', 'task.dependencies.add', 'document.create', 'notification.read', 'change-request.create', 'change-request.approve', 'rfi.respond', 'task.update-status', 'document.update', 'notification.stats', 'notification.create', 'rfi.close', 'document.view']); // OWN-2026-024 H3 fixture: explicit route codes instead of the removed super_admin bypass // O-17/CB-4 fixture (UAT-RECOVERY 06): canonical change-request.apply; S4c fixture: task creation requires the canonical task.create permission (the route gate is stubbed in this suite)
         $this->user = $this->apiFeatureUser;
         $this->grantAdditionalPermissions($this->user, [
             'submittal.create', 'submittal.view', 'submittal.submit', 'submittal.approve', 'submittal.reject',

@@ -200,8 +200,15 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permission): bool
     {
+        // OWN-2026-024 H2b (D6): platform authority additionally needs an ACTIVE server-provisioned operator ledger row; a role
+        // grant alone (or a role name) never establishes it.
+        if (\App\Support\PlatformPermissions::isPlatformCode($permission) && !\App\Support\Rbac\PlatformOperators::isActive((string) $this->id)) {
+            return false;
+        }
+
         return $this->roles()->whereHas('permissions', function ($query) use ($permission) {
-            return $query->where('name', $permission);
+            $query->where('name', $permission);
+            self::excludeRevokedGrants($query);
         })->exists();
     }
 
@@ -210,9 +217,64 @@ class User extends Authenticatable
      */
     public function hasAnyPermission(array $permissions): bool
     {
-        return $this->roles()->whereHas('permissions', function ($query) use ($permissions) {
-            return $query->whereIn('name', $permissions);
+        $nonPlatform = array_values(array_filter($permissions, static fn ($p): bool => !\App\Support\PlatformPermissions::isPlatformCode(is_string($p) ? $p : null)));
+        if ($nonPlatform !== $permissions && \App\Support\Rbac\PlatformOperators::isActive((string) $this->id)) {
+            $nonPlatform = $permissions;
+        }
+        if ($nonPlatform === []) {
+            return false;
+        }
+
+        return $this->roles()->whereHas('permissions', function ($query) use ($nonPlatform) {
+            $query->whereIn('name', $nonPlatform);
+            self::excludeRevokedGrants($query);
         })->exists();
+    }
+
+    /**
+     * OWN-2026-024 H4: every permission name this user is CURRENTLY authorized for, with exactly hasPermission()'s rules —
+     * canonical grants through user_roles, durable revocations excluded, platform.* codes only for an active Platform
+     * Operator. For bulk consumers (navigation visibility) that must not re-implement those rules.
+     *
+     * @return list<string>
+     */
+    public function grantedPermissionNames(): array
+    {
+        $query = \Illuminate\Support\Facades\DB::table('user_roles')
+            ->join('role_permissions', 'role_permissions.role_id', '=', 'user_roles.role_id')
+            ->join('permissions', 'permissions.id', '=', 'role_permissions.permission_id')
+            ->where('user_roles.user_id', (string) $this->id)
+            ->whereNotNull('permissions.name');
+        self::excludeRevokedGrants($query);
+
+        $names = $query->distinct()->pluck('permissions.name')->map(static fn ($n): string => (string) $n)->all();
+        if (!\App\Support\Rbac\PlatformOperators::isActive((string) $this->id)) {
+            $names = array_filter($names, static fn (string $n): bool => !\App\Support\PlatformPermissions::isPlatformCode($n));
+        }
+        sort($names);
+
+        return $names;
+    }
+
+    /**
+     * OWN-2026-024 H2b (D4): authorization-time enforcement of durable revocations. Inside roles()->whereHas('permissions'), the
+     * subquery joins role_permissions; a (role, permission) pair with an ACTIVE revocation never authorizes, even if a pivot row
+     * was re-added by a path that bypassed the seed filter.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder<\Illuminate\Database\Eloquent\Model>|\Illuminate\Database\Query\Builder $query
+     */
+    private static function excludeRevokedGrants($query): void
+    {
+        if (!\App\Support\Rbac\RbacSchema::hasRevocations()) {
+            return; // pre-migration: no revocation can exist yet (the table is created by the H2b migration)
+        }
+        $query->whereNotExists(function ($sub): void {
+            $sub->selectRaw('1')
+                ->from('role_permission_revocations as rpr')
+                ->whereColumn('rpr.role_id', 'role_permissions.role_id')
+                ->whereColumn('rpr.permission_id', 'role_permissions.permission_id')
+                ->whereNull('rpr.superseded_at');
+        });
     }
 
     /**

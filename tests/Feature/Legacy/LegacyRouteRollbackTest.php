@@ -59,6 +59,9 @@ class LegacyRouteRollbackTest extends TestCase
         ], null, ['admin']);
         $this->user->assignRole('super_admin');
         $this->user->assignRole('admin');
+        // OWN-2026-024 H3: the legacy-route console endpoints are host operations (platform.ops.view for monitoring,
+        // platform.maintenance.execute for cleanup / record-usage); the role name super_admin no longer passes them.
+        $this->provisionTestPlatformOperator($this->user, ['platform.ops.view', 'platform.maintenance.execute']);
 
         $this->monitoringService = app(LegacyRouteMonitoringService::class);
     }
@@ -185,9 +188,12 @@ class LegacyRouteRollbackTest extends TestCase
         $stats = $this->monitoringService->getAllUsageStats();
         $this->assertGreaterThan(0, $stats['summary']['total_legacy_usage']);
 
-        // Test cleanup endpoint
+        // Test cleanup endpoint — OWN-2026-024 H2b (Gate 4): a destructive platform operation needs the kill switch enabled and
+        // an explicit confirmation (fixture only; assertions unchanged).
+        config(['platform_operations.destructive_operations_enabled' => true]);
         $response = $this->postJson('/api/legacy-routes/cleanup', [
             'days_to_keep' => 0,
+            'confirm_operation' => 'legacy-routes.cleanup',
         ]);
 
         $response->assertStatus(200);
@@ -240,9 +246,11 @@ class LegacyRouteRollbackTest extends TestCase
     {
         $this->apiAs($this->user, $this->tenant);
 
-        // Test invalid cleanup request
+        // Test invalid cleanup request — OWN-2026-024 H2b (Gate 4) safeguards satisfied so the controller's validation is reached.
+        config(['platform_operations.destructive_operations_enabled' => true]);
         $response = $this->postJson('/api/legacy-routes/cleanup', [
             'days_to_keep' => 'invalid',
+            'confirm_operation' => 'legacy-routes.cleanup',
         ]);
 
         $response->assertStatus(422);

@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\PlatformPermissions;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Src\RBAC\Models\Permission;
@@ -79,7 +80,7 @@ class TestDatabaseSeeder extends Seeder
         }
 
         // Assign permissions to roles
-        $adminPermissions = Permission::all();
+        $adminPermissions = PlatformPermissions::excludeFrom(Permission::query())->get(); // OWN-2026-024: never platform.*
         $adminRole->permissions()->sync($adminPermissions->pluck('id'));
 
         $pmPermissions = Permission::whereIn('code', [

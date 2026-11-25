@@ -27,7 +27,7 @@ class V1TasksCompatibilityCrudTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = $this->apiActingAsTenantAdmin([], null, ['task.update', 'task.delete']); // S4b/O-10,O-13 fixture: canonical task permissions for the acting persona (project PM + assignee already)
+        $this->user = $this->apiActingAsTenantAdmin([], null, ['task.update', 'task.delete', 'task.view']); // OWN-2026-024 H3: + task.view route code (bypass removed). S4b/O-10,O-13 fixture: canonical task permissions for the acting persona (project PM + assignee already)
         $this->tenant = $this->apiFeatureTenant;
     }
 

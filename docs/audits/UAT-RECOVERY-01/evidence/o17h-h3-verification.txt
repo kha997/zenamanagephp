@@ -1,0 +1,51 @@
+# OWN-2026-024 (O-17h) H3 — verification summary (2026-11-25). Local runs only; no production/staging access. Final tree.
+## SQLite, sequential (Backup classes excluded as in CI)
+feature: Tests: 2292, Assertions: 23872, PHPUnit Deprecations: 134, Skipped: 33.
+api: Tests: 825, Assertions: 5284, PHPUnit Deprecations: 101.
+unit: Tests: 960, Assertions: 3695, Failures: 5, PHPUnit Deprecations: 335, Skipped: 27.
+  1) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_waits_while_pending_then_passes_when_all_checks_pass
+  2) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_fails_on_the_first_poll_when_a_check_has_failed
+  3) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_a_cancelled_check_counts_as_failed
+  4) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_fails_after_the_last_poll_when_checks_are_still_pending
+  5) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_its_own_check_is_ignored
+integration: Tests: 31, Assertions: 230, PHPUnit Deprecations: 62.
+red: Tests: 2, Assertions: 4, Failures: 2.
+  1) Tests\Feature\Recovery\UatRecovery07O17hExplicitRbacTest::test_document_policy_does_not_bypass_canonical_grants
+  2) Tests\Feature\Recovery\UatRecovery07O17hExplicitRbacTest::test_sidebar_config_policy_does_not_bypass_canonical_grants
+## Bypass removed, fixtures NOT yet migrated (measurement run)
+feature: Tests: 2279, Assertions: 22193, Failures: 42, PHPUnit Deprecations: 134, Skipped: 33.
+api: Tests: 825, Assertions: 4848, Failures: 81, PHPUnit Deprecations: 101.
+unit: Tests: 960, Assertions: 3695, Failures: 5, PHPUnit Deprecations: 335, Skipped: 27.
+integration: Tests: 31, Assertions: 230, PHPUnit Deprecations: 62.
+## Isolated MariaDB 10.4.28 (ZENA_INVARIANTS_DB=mysql, migrate:fresh, -c phpunit.mysql.xml)
+O-17h security files: OK (52 tests, 1702 assertions)
+RED group: Tests: 2, Assertions: 4, Failures: 2.
+  1) Tests\Feature\Recovery\UatRecovery07O17hExplicitRbacTest::test_document_policy_does_not_bypass_canonical_grants
+  2) Tests\Feature\Recovery\UatRecovery07O17hExplicitRbacTest::test_sidebar_config_policy_does_not_bypass_canonical_grants
+Recovery (CI exclusions): Tests: 211, Assertions: 3033, Failures: 2.
+  1) Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_unauthorised_actors_cannot_assign_reassign_or_unassign_on_any_surface
+  2) Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_owning_project_pm_is_authorised_on_the_assignment_surfaces
+Migrated fixture files (19): Tests: 186, Assertions: 1100, Failures: 4, PHPUnit Deprecations: 1.
+  1) Tests\Feature\ProjectTaskControllerTest::test_can_get_conditional_tasks
+  2) Tests\Feature\ProjectTaskControllerTest::test_index_route_returns_project_scoped_task_collection_in_current_jsend_envelope_family
+  3) Tests\Feature\ProjectTaskControllerTest::test_update_route_returns_200_and_keeps_current_jsend_resource_envelope_family
+  4) Tests\Feature\ProjectTaskControllerTest::test_update_progress_route_returns_200_for_valid_existing_task
+  cause (all 4): ProjectPhase::getEstimatedDurationAttribute(): Return value must be of type int, string returned (MDB-1, past the RBAC gate)
+## Gate 6 rollback round trip (MariaDB)
+after production:rbac: grants=350 platform_grants=0 revocations=0 operators=0
+  2026_11_24_200000_own_2026_024_h2b_rbac_revocations_and_platform_operators  40.67ms DONE
+after rollback (no active records): grants=350 tables=0
+  2026_11_24_200000_own_2026_024_h2b_rbac_revocations_and_platform_operators  197.91ms DONE
+grant-set identical before/after rollback+reapply: yes
+after 2nd production:rbac: grants=350 platform_grants=0
+revoke exit=0 active_revocations=1
+rollback exit=1
+Refusing to roll back OWN-2026-024 H2b: 1 active revocation / Platform Oper  
+tables still present=2 grant_source_col=1 migration_row=1
+after production:rbac: role.view restored on Owner=0
+## Static
+phpstan: [OK] No errors
+composer ssot:lint: exit 0
+owner-governance-lint: PASS; --enforce-gate-ordering: PASS
+lint-mysql-claim-truthfulness: PASS
+## Not verified: MySQL 8; Dusk browser tests; performance group; full Feature/Api on MariaDB

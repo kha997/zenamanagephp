@@ -1,0 +1,32 @@
+# OWN-2026-024 (O-17h) H3 — test migration inventory. MEASURED on SQLite (sequential, Backup classes excluded as in CI).
+# Baseline = H2b tree (all suites green except 5 pre-existing Unit EvidenceFreshnessLiveCheck). Change = only the middleware isSuperAdmin() short-circuit removed.
+# Codes = the rbac:<code> arguments the middleware DENIED for that file's actor (from the middleware's own "Access denied" log line, per-file runs).
+# Approach: R = grant exactly those route codes to the file's existing persona (shared fixture role, a strict subset of what the bypass gave it);
+#           T = grant through a TEST-OWNED role (codes the Owner role must not hold under Gate 2 D3, or held in isolation);
+#           P = test Platform Operator (explicit platform.* code + active platform_operators row; the tenant Owner role name no longer reaches host routes);
+#           F = fixture bug the bypass hid (grant attached where authorization never reads it); S = assertion asserted the bypass itself -> superseded by an explicit guard.
+# No assertion was weakened; no denied case was turned into an allowed case (files' own 403/404 assertions passed under the bypass and still pass).
+file	failing_tests	in_101_measurement	denied_codes	approach
+Feature/Api/RfiApiTest	30	30	rfi.view rfi.create rfi.edit rfi.delete rfi.assign rfi.respond rfi.escalate rfi.close rfi.cancel rfi.resolve-escalation	R
+Feature/ChangeRequestApiTest	20	20	change-request.{create,view,update,delete,submit,approve,reject}	F (test role attached via system_user_roles only, which never authorizes; and Src\RBAC\Models\Permission does not mass-assign name, so the codes were nameless) — now also attached via user_roles, name set
+Feature/Api/RealTimeNotificationsTest	13	13	notification.view notification.create notification.read notification.mark-all-read notification.stats notification.delete	R
+Feature/Api/ChangeRequestApiTest	11	11	change-request.{view,create,update,delete,submit,approve,reject}	R (test-owned role o17-cr-apply-fixture, extended)
+Feature/ProjectTaskControllerTest	9	9	task.view task.update	R
+Feature/Api/TaskDependenciesTest	8	8	task.dependencies.view task.dependencies.add task.dependencies.remove task.update-status	R
+Feature/Api/IntegrationTest	7	7	rfi.create rfi.assign rfi.respond rfi.close submittal.review change-request.create change-request.submit change-request.approve task.dependencies.add task.update-status document.create document.view document.update notification.create notification.read notification.stats	R (multi-module workflow test)
+Feature/Api/ComponentApiTest	4	4	component.read (1 test) component.create (2 tests) component.update (1 test)	T (one code per test; D3: the Owner role must not hold component.*)
+Feature/Api/V1ProjectAndChangeRequestRoutesTest	3	3	project.update project.delete change_request.create	R + T (change_request.create via test-owned role, D3)
+Feature/Api/TaskApiTest	2	2	task.view task.update	R
+Feature/Api/V1TasksCompatibilityCrudTest	2	2	task.view	R
+Feature/GAP057/LaunchEndpointsRunNoArtisanTest	2	2	platform.ops.view	P
+Feature/IntegrationTest	1	1	change_request.create	T (D3)
+Feature/Api/SecurityTest	1	1	document.create	R
+Feature/GAP055/AdminClearCacheFailsClosedTest	1	1	platform.maintenance.execute	P (refusal assertions unchanged)
+Feature/RouteMiddleware/V1LegacyRouteHardeningContractTest	1	1	platform.ops.view	P (inline; envelope assertions unchanged)
+Feature/Admin/AdminRolesCompanyAndSessionTest	0	1	—	already fixed by H2a (legacy redirects moved to rbac:admin.company.manage)
+Feature/Legacy/LegacyRouteRollbackTest	3	0	platform.ops.view platform.maintenance.execute	P (not in 101: at c94ff67c0 these routes were rbac:admin and the persona held the fake 'admin' code; H2a re-gating made them bypass-dependent)
+Feature/Accessibility/AccessibilityTest	1	0	platform.ops.view	P (same H2a re-gating reason)
+Feature/Buttons/ButtonAuthorizationTest	1	0	platform.ops.view	S (test_super_admin_has_full_access: original first assertion getFollowingRedirects('/admin/dashboard')->assertStatus(200) asserted the removed bypass; replaced by getJson('/admin/dashboard')->assertForbidden(); tenant assertions unchanged)
+# Also failing in the first measured run only because files were being edited mid-run (pass on clean rerun): UatRecovery07O17hQuarantineGuardTest (1), UatRecovery07cO17hH2bTest (2).
+# totals: 101 measurement 116 (M1) -> 115 present at H2b (1 fixed by H2a) + 5 new (H2a re-gating hidden by the bypass) = 120 failing tests migrated; Feature 39 + Api 81.
+# M3 (2 policy tests) untouched: H4.

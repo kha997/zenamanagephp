@@ -4,142 +4,100 @@ namespace App\Policies;
 
 use App\Models\Document;
 use App\Models\User;
+use App\Support\Rbac\RbacProtection;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
+/**
+ * OWN-2026-024 (O-17h) H4 (Owner: "H3_ACCEPTED / H4_LOCAL_IMPLEMENTATION_APPROVED", 2026-11-25).
+ *
+ * Every ability is decided by canonical, revocable grants (User::hasPermission: user_roles -> role_permissions, durable
+ * revocations excluded) plus the tenant boundary. No role NAME and no legacy `users.role` value grants anything here.
+ *
+ * Abilities that were deliberately NARROWER than their route gate keep their population, expressed canonically:
+ *  - delete / restore / forceDelete were "super_admin (and admin)" only -> document.delete AND canonical Owner authority
+ *    (the Owner role together with its revocable admin.company.manage grant; RbacProtection::hasOwnerAuthority). A role
+ *    that merely holds document.delete (for example a seeded "System Admin") does not gain deletion.
+ *  - assignApprover (GAP-033 §6.2) was "the project's own manager, or a tenant Admin" -> project PM, or canonical Owner
+ *    authority.
+ */
 class DocumentPolicy
 {
     use HandlesAuthorization;
 
-    /**
-     * Determine whether the user can view any documents.
-     */
     public function viewAny(User $user)
     {
-        return $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
+        return $user->hasPermission('document.view');
     }
 
-    /**
-     * Determine whether the user can view the document.
-     */
     public function view(User $user, Document $document)
     {
-        // Check tenant isolation
-        if ($user->tenant_id !== $document->tenant_id) {
-            return false;
-        }
-
-        // S3: canonical DB permission (same code the route gate already requires), OR the unchanged legacy path.
-        return $user->hasPermission('document.view')
-            || $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
+        return $this->sameTenant($user, $document) && $user->hasPermission('document.view');
     }
 
-    /**
-     * Determine whether the user can create documents.
-     */
     public function create(User $user)
     {
-        return $user->hasRole(['super_admin', 'admin', 'pm', 'designer']);
+        return $user->hasPermission('document.create');
     }
 
-    /**
-     * Determine whether the user can update the document.
-     */
     public function update(User $user, Document $document)
     {
-        // Check tenant isolation
-        if ($user->tenant_id !== $document->tenant_id) {
-            return false;
-        }
-
-        // S3: canonical DB permission (the route gate rbac:document.update already requires it), OR the
-        // unchanged legacy path. Purely additive for permission holders; no legacy decision is removed.
-        return $user->hasPermission('document.update')
-            || $user->hasRole(['super_admin', 'admin', 'pm', 'designer']);
+        return $this->sameTenant($user, $document) && $user->hasPermission('document.update');
     }
 
-    /**
-     * Determine whether the user can delete the document.
-     */
     public function delete(User $user, Document $document)
     {
-        // Check tenant isolation
-        if ($user->tenant_id !== $document->tenant_id) {
-            return false;
-        }
-
-        // Only super_admin and admin can delete
-        return $user->hasRole(['super_admin', 'admin']);
+        return $this->mayRemove($user, $document);
     }
 
-    /**
-     * Determine whether the user can restore the document.
-     */
     public function restore(User $user, Document $document)
     {
-        // Check tenant isolation
-        if ($user->tenant_id !== $document->tenant_id) {
-            return false;
-        }
-
-        return $user->hasRole(['super_admin', 'admin']);
+        return $this->mayRemove($user, $document);
     }
 
-    /**
-     * Determine whether the user can permanently delete the document.
-     */
     public function forceDelete(User $user, Document $document)
     {
-        // Check tenant isolation
-        if ($user->tenant_id !== $document->tenant_id) {
-            return false;
-        }
-
-        return $user->hasRole(['super_admin']);
+        return $this->mayRemove($user, $document);
     }
 
-    /**
-     * Determine whether the user can download the document.
-     */
     public function download(User $user, Document $document)
     {
-        // Check tenant isolation
-        if ($user->tenant_id !== $document->tenant_id) {
-            return false;
-        }
-
-        // S3: same canonical permission the download route gate requires (document.view), OR the legacy path.
-        return $user->hasPermission('document.view')
-            || $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
+        // Same canonical permission the download route gate requires.
+        return $this->sameTenant($user, $document) && $user->hasPermission('document.view');
     }
 
-    /**
-     * Determine whether the user can approve the document.
-     */
     public function approve(User $user, Document $document)
     {
-        // Check tenant isolation
-        if ($user->tenant_id !== $document->tenant_id) {
-            return false;
-        }
-
-        return $user->hasPermission('document.approve');
+        return $this->sameTenant($user, $document) && $user->hasPermission('document.approve');
     }
 
     /**
-     * GAP-033 §6.2: only the document's project's own manager, or a tenant
-     * Admin, may set or change the designated approver. Deliberately
-     * narrower than update() — general editors/designers may not.
+     * GAP-033 §6.2: only the document's project's own manager, or the tenant Owner (canonical Owner authority), may set or
+     * change the designated approver. Deliberately narrower than update() — general editors/designers may not.
      */
     public function assignApprover(User $user, Document $document)
     {
-        if ($user->tenant_id !== $document->tenant_id) {
+        if (!$this->sameTenant($user, $document)) {
             return false;
         }
 
-        if ($user->hasRole(['super_admin', 'admin'])) {
+        if (RbacProtection::hasOwnerAuthority($user)) {
             return true;
         }
 
-        return $document->project?->pm_id !== null && $user->id === $document->project?->pm_id;
+        return $document->project?->pm_id !== null && (string) $user->id === (string) $document->project?->pm_id;
+    }
+
+    private function mayRemove(User $user, Document $document): bool
+    {
+        return $this->sameTenant($user, $document)
+            && $user->hasPermission('document.delete')
+            && RbacProtection::hasOwnerAuthority($user);
+    }
+
+    private function sameTenant(User $user, Document $document): bool
+    {
+        $tenantId = $user->getAttribute('tenant_id');
+
+        return $tenantId !== null && (string) $tenantId === (string) $document->getAttribute('tenant_id');
     }
 }

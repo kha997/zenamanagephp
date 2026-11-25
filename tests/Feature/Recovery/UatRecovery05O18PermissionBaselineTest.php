@@ -157,7 +157,10 @@ class UatRecovery05O18PermissionBaselineTest extends TestCase
         $this->assertSame($first, $third, 'third seed must not change any role grant');
         $this->assertCount(26, $third['Project Member']);
         $this->assertCount(66, $third['Project Manager']);
-        $this->assertSame(DB::table('permissions')->count(), count($third['System Admin']), 'System Admin keeps every permission');
+        // OWN-2026-024 H2a (Owner Gate 2, D1/D6): System Admin keeps every permission EXCEPT the platform.* namespace, which no
+        // tenant/admin role may receive implicitly. Amended from "every permission" (the only change to this assertion).
+        $this->assertSame(DB::table('permissions')->where('code', 'not like', 'platform.%')->count(), count($third['System Admin']), 'System Admin keeps every non-platform permission');
+        $this->assertSame([], array_values(array_filter($third['System Admin'], static fn (string $code): bool => str_starts_with($code, 'platform.'))), 'System Admin holds no platform permission');
     }
 
     public function test_reseeding_never_deletes_grants_added_by_hand(): void

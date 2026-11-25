@@ -1,0 +1,104 @@
+# OWN-2026-024 (O-17h) H4 — ORIGINAL (HEAD c94ff67c0) text of every assertion superseded by H4. Preserved verbatim (Gate 2 rule).
+
+## tests/Feature/Recovery/UatRecovery03DocumentPolicyAlignmentTest.php — matrix rows (data provider)
+            'Legacy admin value, no DB role' => [[null, 'admin', 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => false, 'assignApprover' => true, 'delete' => true]],
+            'Legacy designer value, no DB role' => [[null, 'designer', 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
+
+## tests/Feature/Unit/Policies/DocumentPolicyTest.php::test_user_can_delete_document_with_admin_role
+    public function test_user_can_delete_document_with_admin_role()
+    {
+        $this->user->assignRole('admin');
+
+        $this->assertTrue($this->policy->delete($this->user, $this->document));
+    }
+
+## tests/Feature/Unit/Policies/DocumentPolicyTest.php::test_super_admin_can_perform_all_actions
+    public function test_super_admin_can_perform_all_actions()
+    {
+        $role = $this->user->assignRole('super_admin');
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['name' => 'document.approve'],
+            ['code' => 'document.approve', 'module' => 'document', 'action' => 'approve', 'description' => 'Document approve']
+        );
+        $role->permissions()->syncWithoutDetaching($permission->id);
+
+        $this->assertTrue($this->policy->view($this->user, $this->document));
+        $this->assertTrue($this->policy->create($this->user));
+        $this->assertTrue($this->policy->update($this->user, $this->document));
+        $this->assertTrue($this->policy->delete($this->user, $this->document));
+        $this->assertTrue($this->policy->download($this->user, $this->document));
+        $this->assertTrue($this->policy->approve($this->user, $this->document));
+        $this->assertTrue($this->policy->forceDelete($this->user, $this->document));
+    }
+
+## tests/Feature/Unit/Policies/DocumentPolicySimpleTest.php::test_user_can_view_document_in_same_tenant
+    public function test_user_can_view_document_in_same_tenant()
+    {
+        $this->user->role = 'admin';
+
+        $this->assertTrue($this->policy->view($this->user, $this->document));
+    }
+
+## tests/Feature/Unit/Policies/DocumentPolicySimpleTest.php::test_user_can_create_document_with_proper_role
+    public function test_user_can_create_document_with_proper_role()
+    {
+        $this->user->role = 'admin';
+
+        $this->assertTrue($this->policy->create($this->user));
+    }
+
+## tests/Feature/Policies/PolicyTest.php::document_policy_allows_proper_access
+    public function document_policy_allows_proper_access()
+    {
+        $document = Document::factory()->for($this->tenant, 'tenant')->create();
+        // Super admin can do everything
+        $this->assertTrue($this->superAdmin->can('view', $document));
+        $this->assertTrue($this->superAdmin->can('create', Document::class));
+        $this->assertTrue($this->superAdmin->can('update', $document));
+        $this->assertTrue($this->superAdmin->can('delete', $document));
+
+        // Admin can do most things
+        $this->assertTrue($this->admin->can('view', $document));
+        $this->assertTrue($this->admin->can('create', Document::class));
+        $this->assertTrue($this->admin->can('update', $document));
+        $this->assertTrue($this->admin->can('delete', $document));
+
+        // PM can view and create
+        $this->assertTrue($this->pm->can('view', $document));
+        $this->assertTrue($this->pm->can('create', Document::class));
+        $this->assertTrue($this->pm->can('update', $document));
+        $this->assertFalse($this->pm->can('delete', $document));
+
+        // Designer can view and create
+        $this->assertTrue($this->designer->can('view', $document));
+        $this->assertTrue($this->designer->can('create', Document::class));
+        $this->assertTrue($this->designer->can('update', $document));
+        $this->assertFalse($this->designer->can('delete', $document));
+
+        // Engineer can only view
+        $this->assertTrue($this->engineer->can('view', $document));
+        $this->assertFalse($this->engineer->can('create', Document::class));
+        $this->assertFalse($this->engineer->can('update', $document));
+        $this->assertFalse($this->engineer->can('delete', $document));
+
+        // Regular user cannot access
+        $this->assertFalse($this->regularUser->can('view', $document));
+        $this->assertFalse($this->regularUser->can('create', Document::class));
+        $this->assertFalse($this->regularUser->can('update', $document));
+        $this->assertFalse($this->regularUser->can('delete', $document));
+    }
+
+## tests/Unit/Policies/DocumentAssignApproverPolicyTest.php::test_admin_role_may_assign_approver_even_if_not_the_projects_manager
+    public function test_admin_role_may_assign_approver_even_if_not_the_projects_manager(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+        $admin->roles()->attach(\App\Models\Role::factory()->create(['name' => 'admin']));
+        $otherPm = User::factory()->create(['tenant_id' => $tenant->id]);
+        $project = Project::factory()->create(['tenant_id' => $tenant->id, 'pm_id' => $otherPm->id]);
+        $document = Document::factory()->create(['tenant_id' => $tenant->id, 'project_id' => $project->id]);
+
+        self::assertTrue($this->policy->assignApprover($admin, $document));
+    }
+
+## tests/Feature/Buttons/ButtonAuthorizationTest.php::test_super_admin_has_full_access (superseded in H3; see 104 §4)

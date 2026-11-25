@@ -33,7 +33,8 @@ class SecurityTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin();
+        // OWN-2026-024 H3 fixture: the super_admin role-name bypass is gone; grant exactly the codes these routes are gated on.
+        $this->apiActingAsTenantAdmin([], null, ['document.create']);
         $this->user = $this->apiFeatureUser;
         $this->tenantId = $this->apiFeatureTenant->id;
         $this->project = Project::factory()->create([

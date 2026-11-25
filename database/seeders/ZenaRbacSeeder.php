@@ -303,7 +303,8 @@ class ZenaRbacSeeder extends Seeder
             );
 
             if ($permissions === ['*']) {
-                $role->permissions()->sync(ZenaPermission::all()->pluck('id'));
+                // OWN-2026-024: '*' never includes the platform namespace (granted only to a server-provisioned Platform Operator).
+                $role->permissions()->sync(ZenaPermission::query()->where('code', 'not like', \App\Support\PlatformPermissions::PREFIX . '%')->pluck('id'));
             } else {
                 $role->permissions()->sync(ZenaPermission::whereIn('code', $permissions)->pluck('id'));
             }

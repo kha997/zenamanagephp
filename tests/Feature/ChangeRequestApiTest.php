@@ -92,10 +92,19 @@ class ChangeRequestApiTest extends TestCase
                 ]
             );
 
+            // OWN-2026-024 H3: User::hasPermission matches permissions.name, which Src\RBAC\Models\Permission does not mass-assign;
+            // a nameless test code never authorized (the super_admin role-name bypass used to hide that).
+            if ($permission->getAttribute('name') === null) {
+                $permission->forceFill(['name' => $permissionCode])->save();
+            }
+
             $role->permissions()->syncWithoutDetaching($permission->id);
         }
 
         $this->user->systemRoles()->syncWithoutDetaching($role->id);
+        // OWN-2026-024 H3 fixture: route permissions are read from user_roles only (system_user_roles never authorized; the
+        // super_admin role-name bypass used to hide that), so attach the same test role there too.
+        $this->user->roles()->syncWithoutDetaching($role->id);
     }
 
     /**

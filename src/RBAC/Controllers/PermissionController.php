@@ -2,6 +2,8 @@
 
 namespace Src\RBAC\Controllers;
 
+use App\Support\Rbac\RbacProtection;
+use App\Support\PlatformPermissions;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Models\Permission;
@@ -101,8 +103,19 @@ class PermissionController
             $errors['action'] = 'Action không được để trống';
         }
         
+        // OWN-2026-024 H2a (D1/D6): the platform namespace is a fixed, seeded catalogue; it can never be created over HTTP.
+        if (PlatformPermissions::isPlatformModule(is_string($module) ? $module : null)) {
+            $errors['module'] = 'Không thể tạo quyền thuộc nhóm nền tảng (platform.*).';
+        }
+
         if (!empty($module) && !empty($action)) {
             $code = Permission::generateCode($module, $action);
+
+            // OWN-2026-024 H2b (D5): authority-bearing namespaces (role.*, permission.*, system.*, platform.* and the exact admin
+            // codes) are part of the seeded catalogue; they are never minted over HTTP.
+            if (RbacProtection::isProtectedCode($code)) {
+                $errors['module'] = 'Không thể tạo quyền thuộc nhóm quản trị được bảo vệ.';
+            }
             
             if (Permission::where('code', $code)->exists()) {
                 $errors['code'] = 'Permission với code này đã tồn tại: ' . $code;
@@ -191,6 +204,14 @@ class PermissionController
             ], 404);
         }
 
+        // OWN-2026-024 H2a (D1/D6): the platform catalogue is not editable or deletable over HTTP.
+        if (PlatformPermissions::isPlatformCode((string) $permission->code)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Quyền nền tảng (platform.*) không thể sửa hoặc xoá qua API.'
+            ], 422);
+        }
+
         $permission->update($request->only(['description']));
 
         $this->eventBus->publish('rbac.permission.updated', [
@@ -221,6 +242,14 @@ class PermissionController
                 'status' => 'error',
                 'message' => 'Permission không tồn tại'
             ], 404);
+        }
+
+        // OWN-2026-024 H2a (D1/D6): the platform catalogue is not editable or deletable over HTTP.
+        if (PlatformPermissions::isPlatformCode((string) $permission->code)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Quyền nền tảng (platform.*) không thể sửa hoặc xoá qua API.'
+            ], 422);
         }
 
         $inUse = $permission->roles()->exists();

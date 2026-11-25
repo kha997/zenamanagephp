@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\Rbac\RbacSeedGrants;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -353,6 +354,11 @@ class ZenaPermissionsSeeder extends Seeder
             Permission::query()->updateOrCreate([$lookupColumn => $definition['code']], $attributes);
         }
 
+        // OWN-2026-024 H2a (Owner Gate 2, D1): the five platform.* codes live in the same catalogue run (so every path that
+        // seeds the canonical catalogue — DatabaseSeeder, production:rbac, test fixtures — knows them). Catalogue ONLY: they
+        // are not in CANONICAL_PERMISSIONS, so no admin/owner alias seeder grants them, and every bulk grant excludes them.
+        (new PlatformPermissionCatalogueSeeder())->run();
+
         $this->repairNullPermissionNames();
         $this->grantSystemAdminOnlyPermissions();
         $this->grantTemplateApplyToProjectManager();
@@ -397,7 +403,7 @@ class ZenaPermissionsSeeder extends Seeder
 
         $ids = Permission::query()->whereIn('code', array_column(self::SYSTEM_ADMIN_ONLY_PERMISSIONS, 'code'))->pluck('id')->all();
         if ($ids !== []) {
-            $role->permissions()->syncWithoutDetaching($ids);
+            RbacSeedGrants::grantIds((string) $role->id, $ids); // OWN-2026-024 H2b (D4): seed path honours revocations
         }
     }
 
@@ -407,7 +413,7 @@ class ZenaPermissionsSeeder extends Seeder
      */
     private function grantTemplateApplyToProjectManager(): void
     {
-        $pmRole = Role::where('name', 'Project Manager')->first();
+        $pmRole = Role::where('name', 'Project Manager')->whereNull('tenant_id')->first(); // OWN-2026-024 H2b: global role only
 
         if (!$pmRole) {
             return;
@@ -421,7 +427,7 @@ class ZenaPermissionsSeeder extends Seeder
             return;
         }
 
-        $pmRole->permissions()->syncWithoutDetaching($permissionIds);
+        RbacSeedGrants::grantIds((string) $pmRole->id, $permissionIds); // OWN-2026-024 H2b (D4): seed path honours revocations
     }
 
     /**
@@ -439,7 +445,7 @@ class ZenaPermissionsSeeder extends Seeder
      */
     private function grantChangeRequestPermissionsToProjectManager(): void
     {
-        $pmRole = Role::where('name', 'Project Manager')->first();
+        $pmRole = Role::where('name', 'Project Manager')->whereNull('tenant_id')->first(); // OWN-2026-024 H2b: global role only
 
         if (!$pmRole) {
             return;
@@ -458,6 +464,6 @@ class ZenaPermissionsSeeder extends Seeder
             return;
         }
 
-        $pmRole->permissions()->syncWithoutDetaching($permissionIds);
+        RbacSeedGrants::grantIds((string) $pmRole->id, $permissionIds); // OWN-2026-024 H2b (D4): seed path honours revocations
     }
 }

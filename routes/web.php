@@ -94,7 +94,13 @@ if (app()->environment(['local', 'testing'])) {
 
 // Universal Frame API Routes (moved to /api/v1/universal-frame)
 Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function () {
-    $universalFrameHardeningStack = ['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'];
+    // OWN-2026-024 H2a: was 'rbac:admin' (not a permission; only the legacy super_admin short-circuit passed it). The surviving
+    // universal-frame routes are host-console widgets: read = platform.ops.view; creating a system alert = platform.realtime.broadcast.
+    // Retired (D2 — static mock data / widget actions with zero references in UI, code and tests): GET /alerts, /alerts/stats,
+    // POST /alerts/acknowledge, /alerts/mute, /alerts/dismiss-all, GET /activities, /activities/by-type, /activities/stats,
+    // GET /filters/presets, /filters/deep, GET|POST /filters/saved-views, DELETE /filters/saved-views/{viewId}.
+    $universalFrameReadStack = ['tenant.isolation', 'rbac:platform.ops.view', 'input.sanitization', 'error.envelope'];
+    $universalFrameBroadcastStack = ['tenant.isolation', 'rbac:platform.realtime.broadcast', 'input.sanitization', 'error.envelope'];
 
     // KPI routes removed 2026-07-12: KpiController/KpiService served 100% hardcoded
     // mock values behind a real RBAC gate. Real KPI data now lives at
@@ -103,20 +109,8 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     // no consumer) pending a cleanup pass with file-delete permission.
 
     // Alert Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->name('api.alerts.index');
-        Route::get('/alerts/stats', [App\Http\Controllers\AlertController::class, 'stats'])->name('api.alerts.stats');
-        Route::post('/alerts/acknowledge', [App\Http\Controllers\AlertController::class, 'acknowledge'])->name('api.alerts.acknowledge');
-        Route::post('/alerts/mute', [App\Http\Controllers\AlertController::class, 'mute'])->name('api.alerts.mute');
-        Route::post('/alerts/dismiss-all', [App\Http\Controllers\AlertController::class, 'dismissAll'])->name('api.alerts.dismiss-all');
+    Route::middleware($universalFrameBroadcastStack)->group(function () {
         Route::post('/alerts/create', [App\Http\Controllers\AlertController::class, 'create'])->name('api.alerts.create');
-    });
-
-    // Activity Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::get('/activities', [App\Http\Controllers\ActivityController::class, 'index'])->name('api.activities.index');
-        Route::get('/activities/by-type', [App\Http\Controllers\ActivityController::class, 'byType'])->name('api.activities.by-type');
-        Route::get('/activities/stats', [App\Http\Controllers\ActivityController::class, 'stats'])->name('api.activities.stats');
     });
 
     // Smart Tools Routes
@@ -124,17 +118,12 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     // (mock SearchService/SearchController đã xóa)
 
     // Filter Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::get('/filters/presets', [App\Http\Controllers\FilterController::class, 'presets'])->name('api.filters.presets');
-        Route::get('/filters/deep', [App\Http\Controllers\FilterController::class, 'deepFilters'])->name('api.filters.deep');
-        Route::get('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'savedViews'])->name('api.filters.saved-views');
-        Route::post('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'saveView'])->name('api.filters.save-view');
-        Route::delete('/filters/saved-views/{viewId}', [App\Http\Controllers\FilterController::class, 'deleteView'])->name('api.filters.delete-view');
+    Route::middleware($universalFrameReadStack)->group(function () {
         Route::post('/filters/apply', [App\Http\Controllers\FilterController::class, 'applyFilters'])->name('api.filters.apply');
     });
 
     // Analysis Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
+    Route::middleware($universalFrameReadStack)->group(function () {
         Route::post('/analysis', [App\Http\Controllers\AnalysisController::class, 'index'])->name('api.analysis.index');
         Route::get('/analysis/{context}', [App\Http\Controllers\AnalysisController::class, 'context'])->name('api.analysis.context');
         Route::get('/analysis/{context}/metrics', [App\Http\Controllers\AnalysisController::class, 'metrics'])->name('api.analysis.metrics');
@@ -160,18 +149,24 @@ Route::prefix('api/v1/accessibility')->middleware(['auth', 'tenant.isolation', '
 });
 
 // Performance Optimization API Routes (moved to /api/v1/performance)
-Route::prefix('api/v1/performance')->middleware(['auth', 'tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
-    Route::get('/metrics', [App\Http\Controllers\PerformanceOptimizationController::class, 'metrics'])->name('api.performance.metrics');
-    Route::get('/analysis', [App\Http\Controllers\PerformanceOptimizationController::class, 'analysis'])->name('api.performance.analysis');
-    Route::post('/optimize-database', [App\Http\Controllers\PerformanceOptimizationController::class, 'optimizeDatabase'])->name('api.performance.optimize-database');
-    Route::post('/implement-caching', [App\Http\Controllers\PerformanceOptimizationController::class, 'implementCaching'])->name('api.performance.implement-caching');
-    Route::post('/optimize-api', [App\Http\Controllers\PerformanceOptimizationController::class, 'optimizeApi'])->name('api.performance.optimize-api');
-    Route::post('/optimize-assets', [App\Http\Controllers\PerformanceOptimizationController::class, 'optimizeAssets'])->name('api.performance.optimize-assets');
-    Route::get('/recommendations', [App\Http\Controllers\PerformanceOptimizationController::class, 'recommendations'])->name('api.performance.recommendations');
+// OWN-2026-024 H2a: read = platform.ops.view; every "optimize"/"implement" action = platform.maintenance.execute (was rbac:admin).
+Route::prefix('api/v1/performance')->middleware(['auth', 'tenant.isolation', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::middleware(['rbac:platform.ops.view'])->group(function () {
+        Route::get('/metrics', [App\Http\Controllers\PerformanceOptimizationController::class, 'metrics'])->name('api.performance.metrics');
+        Route::get('/analysis', [App\Http\Controllers\PerformanceOptimizationController::class, 'analysis'])->name('api.performance.analysis');
+        Route::get('/recommendations', [App\Http\Controllers\PerformanceOptimizationController::class, 'recommendations'])->name('api.performance.recommendations');
+    });
+    Route::middleware(['rbac:platform.maintenance.execute'])->group(function () {
+        Route::post('/optimize-database', [App\Http\Controllers\PerformanceOptimizationController::class, 'optimizeDatabase'])->middleware('platform.guarded:performance.optimize-database')->name('api.performance.optimize-database');
+        Route::post('/implement-caching', [App\Http\Controllers\PerformanceOptimizationController::class, 'implementCaching'])->middleware('platform.guarded:performance.implement-caching')->name('api.performance.implement-caching');
+        Route::post('/optimize-api', [App\Http\Controllers\PerformanceOptimizationController::class, 'optimizeApi'])->middleware('platform.guarded:performance.optimize-api')->name('api.performance.optimize-api');
+        Route::post('/optimize-assets', [App\Http\Controllers\PerformanceOptimizationController::class, 'optimizeAssets'])->middleware('platform.guarded:performance.optimize-assets')->name('api.performance.optimize-assets');
+    });
 });
 
 // Final Integration & Launch API Routes (moved to /api/v1/final-integration)
-Route::prefix('api/v1/final-integration')->middleware(['auth', 'tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+// OWN-2026-024 H2a: check-only since GAP-057 (no artisan from the web) -> platform.ops.view (was rbac:admin).
+Route::prefix('api/v1/final-integration')->middleware(['auth', 'tenant.isolation', 'rbac:platform.ops.view', 'input.sanitization', 'error.envelope'])->group(function () {
     Route::get('/launch-status', [App\Http\Controllers\FinalIntegrationController::class, 'getLaunchStatus'])->name('api.final-integration.launch-status');
     Route::post('/system-integration-checks', [App\Http\Controllers\FinalIntegrationController::class, 'runSystemIntegrationChecks'])->name('api.final-integration.system-integration-checks');
     Route::post('/production-readiness-checks', [App\Http\Controllers\FinalIntegrationController::class, 'runProductionReadinessChecks'])->name('api.final-integration.production-readiness-checks');
@@ -192,16 +187,20 @@ Route::prefix('api/v1/final-integration')->middleware(['auth', 'tenant.isolation
 // further below — earlier duplicate closure definitions were removed.
 
 // Admin Routes (System-wide with auth + rbac:admin middleware)
+// OWN-2026-024 H2a: host console pages = platform.ops.view; whole-database maintenance / log clean-up = platform.maintenance.execute;
+// full-database export = platform.backup.execute (distinct from maintenance). All were rbac:admin (not a permission).
 Route::get('/admin/dashboard', function () {
     return view('admin.dashboard');
-})->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->name('admin-dashboard');
+})->middleware(['auth', 'tenant.isolation', 'rbac:platform.ops.view'])->name('admin-dashboard');
 
-Route::middleware(['auth', 'tenant.isolation', 'rbac:admin'])->prefix('admin')->group(function () {
-    Route::get('maintenance', [MaintenanceController::class, 'index']);
-    Route::post('maintenance/clear-cache', [MaintenanceController::class, 'clearCache']);
-    Route::post('maintenance/database', [MaintenanceController::class, 'databaseMaintenance']);
-    Route::post('maintenance/cleanup-logs', [MaintenanceController::class, 'cleanupLogs']);
-    Route::post('maintenance/backup-database', [MaintenanceController::class, 'backupDatabase']);
+Route::middleware(['auth', 'tenant.isolation'])->prefix('admin')->group(function () {
+    Route::get('maintenance', [MaintenanceController::class, 'index'])->middleware('rbac:platform.ops.view');
+    Route::post('maintenance/clear-cache', [MaintenanceController::class, 'clearCache'])->middleware('rbac:platform.maintenance.execute');
+    // OWN-2026-024 H2b (Gate 4): destructive / export operations additionally pass platform.guarded (kill switch default OFF,
+    // explicit confirm_operation, audit before and after, never a file download).
+    Route::post('maintenance/database', [MaintenanceController::class, 'databaseMaintenance'])->middleware(['rbac:platform.maintenance.execute', 'platform.guarded:maintenance.database']);
+    Route::post('maintenance/cleanup-logs', [MaintenanceController::class, 'cleanupLogs'])->middleware(['rbac:platform.maintenance.execute', 'platform.guarded:maintenance.cleanup-logs']);
+    Route::post('maintenance/backup-database', [MaintenanceController::class, 'backupDatabase'])->middleware(['rbac:platform.backup.execute', 'platform.guarded:backup.database']);
 });
 
 if (app()->environment(['local', 'testing'])) {
@@ -236,16 +235,24 @@ if (app()->environment(['local', 'testing'])) {
 // MOVED: Debug Login Route moved to /_debug namespace
 
 // Admin Routes - System-wide with auth + rbac:admin middleware
-Route::prefix('admin')->name('admin-')->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->group(function () {
+// OWN-2026-024 H2a: these two legacy pages only redirect to the real company-admin pages, so they carry the destination's
+// permission (admin.company.manage) instead of a platform code (was rbac:admin). Route names unchanged.
+Route::prefix('admin')->name('admin-')->middleware(['auth', 'tenant.isolation', 'rbac:admin.company.manage'])->group(function () {
+    // GAP-129 L-1: these were mock-data pages; the real ones live under /app/admin.
+    Route::get('/users', fn () => redirect()->route('app.admin.users'))->name('users');
+    Route::get('/tenants', fn () => redirect()->route('app.admin.company'))->name('tenants');
+});
+
+// OWN-2026-024 H2a: legacy host-console pages = platform.ops.view (was rbac:admin). /users and /tenants only redirect to the real
+// company-admin pages, so they carry the destination's permission (admin.company.manage). /tasks (placeholder, zero references)
+// was retired (D2).
+Route::prefix('admin')->name('admin-')->middleware(['auth', 'tenant.isolation', 'rbac:platform.ops.view'])->group(function () {
     Route::get('/', function () {
         return view('admin.dashboard-css-inline');
     })->name('dashboard');
     Route::get('/dashboard', function () {
         return view('admin.dashboard');
     })->name('dashboard.page');
-    // GAP-129 L-1: these were mock-data pages; the real ones live under /app/admin.
-    Route::get('/users', fn () => redirect()->route('app.admin.users'))->name('users');
-    Route::get('/tenants', fn () => redirect()->route('app.admin.company'))->name('tenants');
     Route::get('/security', function () {
         return '<h1>Security</h1><p>Security settings here.</p>';
     })->name('security');
@@ -265,9 +272,6 @@ Route::prefix('admin')->name('admin-')->middleware(['auth', 'tenant.isolation', 
     Route::get('/projects', function () {
         return view('admin.projects');
     })->name('projects');
-    Route::get('/tasks', function () {
-        return '<h1>Tasks</h1><p>Task management here.</p>';
-    })->name('tasks');
     Route::get('/settings', function () {
         return '<h1>Settings</h1><p>System settings here.</p>';
     })->name('settings');

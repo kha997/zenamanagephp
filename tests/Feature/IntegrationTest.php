@@ -30,6 +30,8 @@ class IntegrationTest extends TestCase
         // O-17 / CB-4 fixture (UAT-RECOVERY 06): the default persona's `super_admin` role no longer bypasses task creation;
         // grant the canonical task.create permission explicitly.
         $this->apiActingAsTenantAdmin([], null, ['task.create']);
+        // OWN-2026-024 H3: the route code change_request.create (not held by the Owner role, D3) via a test-owned role.
+        $this->grantThroughTestRole($this->apiFeatureUser, ['change_request.create']);
         $this->user = $this->apiFeatureUser;
         $this->tenantId = $this->apiFeatureTenant->id;
     }

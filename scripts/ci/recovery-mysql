@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# OWN-2026-024 — full UAT Recovery suite on a disposable MySQL 8 service (CI only).
+#
+# Why: the Recovery suite (tests/Feature/Recovery, incl. the O-17h H1–H4 security tests) has only ever run on SQLite in CI;
+# tests/bootstrap.php forces SQLite unless ZENA_INVARIANTS_DB=mysql. This entrypoint runs the WHOLE suite against real MySQL
+# with real migrations (migrate:fresh on the job's throw-away service database), with the same exclusion as ordinary CI
+# (the documented uat-recovery-01-quarantine group, guarded by UatRecovery01QuarantineGuardTest) and nothing else excluded.
+#
+# Fail-closed, no suppression:
+#  - the executed inventory must equal PHPUnit's own --list-tests inventory for the same selection (no silent narrowing);
+#  - any skipped test fails the job (MySQL is reachable per preflight, so a skip would be a silent pass);
+#  - ANY failure or error fails the job — including failures listed in scripts/ci/recovery-mysql-known-failures.txt. That file
+#    only MAPS failures to their documented baseline defect in the job summary; it never turns a failure into a pass.
+#  - a listed known failure that now passes is reported, so the baseline list cannot go stale silently.
+#
+# No production database, no persistent data (service container is discarded), no real credentials (CI-local root password),
+# no PII (factories only).
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+export APP_ENV=testing
+export PCOV_ENABLED=0
+
+source scripts/ci/lib/mysql-fail-closed.sh
+
+zena_mysql_resolve_env
+zena_mysql_print_config
+zena_mysql_ensure_connection
+zena_mysql_preflight_connection
+
+mkdir -p resources/views storage/framework/views storage/framework/cache bootstrap/cache
+
+php artisan optimize:clear
+php artisan migrate:fresh --force
+php artisan migrate:status > /dev/null
+
+zena_mysql_ensure_connection
+
+OUT_DIR="${RUNNER_TEMP:-/tmp}/recovery-mysql"
+mkdir -p "$OUT_DIR"
+JUNIT_OUT="$OUT_DIR/recovery-mysql-junit.xml"
+LIST_OUT="$OUT_DIR/recovery-mysql-list.xml"
+SELECTION=(-c phpunit.mysql.xml tests/Feature/Recovery --exclude-group uat-recovery-01-quarantine)
+
+mysql_version="$(php -r 'try { $p = new PDO("mysql:host=".getenv("DB_HOST").";port=".getenv("DB_PORT"), getenv("DB_USERNAME"), getenv("DB_PASSWORD")); echo $p->query("SELECT VERSION()")->fetchColumn(); } catch (Throwable $e) { echo "unknown"; }')"
+echo "Recovery on MySQL: server version ${mysql_version}"
+
+./vendor/bin/phpunit "${SELECTION[@]}" --list-tests-xml "$LIST_OUT" > /dev/null
+
+set +e
+./vendor/bin/phpunit "${SELECTION[@]}" --log-junit "$JUNIT_OUT"
+phpunit_exit=$?
+set -e
+
+php scripts/ci/recovery-mysql-report.php "$LIST_OUT" "$JUNIT_OUT" scripts/ci/recovery-mysql-known-failures.txt "$mysql_version" "$phpunit_exit"

@@ -1,0 +1,5 @@
+# OWN-2026-024 — documented Recovery failures on MySQL/MariaDB (baseline MAP only; listing a test here never makes it pass).
+# Format: <Fully\Qualified\Class>::<method><TAB><baseline defect id and source>
+# Observed on isolated MariaDB 10.4 (docs/audits/UAT-RECOVERY-01/103 §8, 104 §8, 105 §10); not yet observed on MySQL 8.
+Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_unauthorised_actors_cannot_assign_reassign_or_unassign_on_any_surface	SPLIT-PERCENT: task_assignments.split_percent missing from migrations -> v1 assignment 500 on MySQL (O-18 report; separate fix)
+Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_owning_project_pm_is_authorised_on_the_assignment_surfaces	SPLIT-PERCENT: task_assignments.split_percent missing from migrations -> v1 assignment 500 on MySQL (O-18 report; separate fix)

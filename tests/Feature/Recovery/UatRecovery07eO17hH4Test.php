@@ -139,12 +139,20 @@ class UatRecovery07eO17hH4Test extends TestCase
         $siteEngineer = $this->userWith($this->a, [Role::query()->where('name', 'site_engineer')->firstOrFail()]);
         Sanctum::actingAs($siteEngineer, ['*']);
         $h = ['X-Tenant-ID' => (string) $this->a->id];
-        $this->assertSame(403, $this->withHeaders($h)->getJson('/api/documents-simple')->status(), 'no document.view');
+        // With APP_DEBUG on in a testing/local environment, routes/debug_api.php re-registers GET api/documents-simple as an
+        // unauthenticated stub AFTER routes/api.php, replacing the real route (finding DBG-1, never loaded in production). Assert
+        // the real controller only where it actually answers; the policy decision is asserted unconditionally.
+        $this->assertFalse(\Illuminate\Support\Facades\Gate::forUser($siteEngineer)->allows('viewAny', Document::class), 'no document.view');
+        $indexRoute = \Illuminate\Support\Facades\Route::getRoutes()->match(\Illuminate\Http\Request::create('/api/documents-simple', 'GET'));
+        if ($indexRoute->getActionName() === \App\Http\Controllers\Api\SimpleDocumentController::class . '@index') {
+            $this->assertSame(403, $this->withHeaders($h)->getJson('/api/documents-simple')->status(), 'no document.view');
+        }
         $before = Document::withoutGlobalScopes()->count();
         $this->withHeaders($h)->postJson('/api/documents-simple', ['title' => 'x'])->assertForbidden();
         $this->assertSame($before, Document::withoutGlobalScopes()->count());
 
         $owner = $this->userWith($this->a, [$this->ownerRole]);
+        $this->assertTrue(\Illuminate\Support\Facades\Gate::forUser($owner)->allows('viewAny', Document::class));
         Sanctum::actingAs($owner, ['*']);
         $this->withHeaders($h)->getJson('/api/documents-simple')->assertOk();
     }

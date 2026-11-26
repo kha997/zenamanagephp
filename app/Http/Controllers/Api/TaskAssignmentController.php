@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Task;
 use App\Models\TaskAssignment;
+use App\Services\TaskAssignmentShareException;
+use App\Services\TaskAssignmentShares;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -91,41 +93,36 @@ class TaskAssignmentController extends BaseApiController
             return $this->errorResponse('User not found in this tenant', 422);
         }
 
-        // Check if user is already assigned to this task
-        $existingAssignment = TaskAssignment::where('task_id', $taskId)
-            ->where('user_id', $request->input('user_id'))
-            ->first();
-
-        if ($existingAssignment) {
-            return $this->errorResponse('User is already assigned to this task', 400);
-        }
-
-        // Check total split percentage
-        $currentTotal = TaskAssignment::where('task_id', $taskId)
-            ->sum('split_percent');
-
-        $newPercentage = $request->input('split_percent', 100);
-
-        if ($currentTotal + $newPercentage > 100) {
-            return $this->errorResponse(
-                'Total split percentage cannot exceed 100%. Current total: ' . $currentTotal . '%',
-                400
-            );
-        }
+        $input = $request->input('split_percent');
+        $newPercentage = TaskAssignmentShares::normalise($input === null ? TaskAssignmentShares::DEFAULT_PERCENT : (float) $input);
 
         try {
-            $assignment = TaskAssignment::create([
-                'task_id' => $request->input('task_id'),
-                'user_id' => $request->input('user_id'),
-                'role' => $request->input('role'),
-                'split_percent' => $newPercentage,
-                'assigned_at' => now(),
-                'assigned_by' => $user->id,
-                'notes' => $request->input('notes'),
-                'status' => 'pending',
-            ]);
+            // OWN-2026-024 SPLIT-PERCENT: duplicate check, 100 % check and insert run under one task-row lock, so concurrent
+            // requests serialise; the response is re-read from the database (what is returned is what was stored).
+            $assignmentId = TaskAssignmentShares::withTaskLock((string) $task->id, function () use ($request, $task, $taskId, $newPercentage, $user): string {
+                if (TaskAssignmentShares::isAssigned($taskId, (string) $request->input('user_id'))) {
+                    throw TaskAssignmentShareException::duplicate();
+                }
+                TaskAssignmentShares::assertFits($taskId, $newPercentage);
 
-            return $this->successResponse($assignment->load(['task', 'user']), 'Assignment created successfully', 201);
+                return (string) TaskAssignment::create([
+                    'task_id' => $request->input('task_id'),
+                    'tenant_id' => (string) $task->tenant_id,
+                    'user_id' => $request->input('user_id'),
+                    'role' => $request->input('role'),
+                    'split_percent' => $newPercentage,
+                    'assigned_at' => now(),
+                    'assigned_by' => (string) $user->id,
+                    'notes' => $request->input('notes'),
+                    'status' => 'pending',
+                ])->getKey();
+            });
+
+            $assignment = TaskAssignment::query()->withoutGlobalScopes()->with(['task', 'user'])->findOrFail($assignmentId);
+
+            return $this->successResponse($assignment, 'Assignment created successfully', 201);
+        } catch (TaskAssignmentShareException $e) {
+            return $this->errorResponse($e->getMessage(), $e->reason === TaskAssignmentShareException::REASON_TASK_NOT_FOUND ? 404 : 400);
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to create assignment: ' . $e->getMessage(), 500);
         }
@@ -187,28 +184,30 @@ class TaskAssignmentController extends BaseApiController
             return $this->errorResponse('Validation failed', 422, $validator->errors());
         }
 
-        // Check total split percentage if updating split_percent
-        if ($request->has('split_percent')) {
-            $currentTotal = TaskAssignment::where('task_id', $assignment->task_id)
-                ->where('id', '!=', $assignmentId)
-                ->sum('split_percent');
-
-            $newPercentage = $request->input('split_percent');
-
-            if ($currentTotal + $newPercentage > 100) {
-                return $this->errorResponse(
-                    'Total split percentage cannot exceed 100%. Current total: ' . $currentTotal . '%',
-                    400
-                );
-            }
+        $changes = $request->only(['role', 'split_percent', 'notes', 'status']);
+        // An explicit null share is not a valid recorded value; it would silently erase the share (unchanged contract: only a
+        // supplied number changes it).
+        if (array_key_exists('split_percent', $changes) && $changes['split_percent'] === null) {
+            unset($changes['split_percent']);
+        }
+        if (array_key_exists('split_percent', $changes)) {
+            $changes['split_percent'] = TaskAssignmentShares::normalise((float) $changes['split_percent']);
         }
 
         try {
-            $assignment->update($request->only([
-                'role', 'split_percent', 'notes', 'status',
-            ]));
+            // OWN-2026-024 SPLIT-PERCENT: the 100 % check (excluding this assignment) and the update run under the task lock.
+            TaskAssignmentShares::withTaskLock((string) $assignment->task_id, function () use ($assignment, $changes): void {
+                if (array_key_exists('split_percent', $changes)) {
+                    TaskAssignmentShares::assertFits((string) $assignment->task_id, (float) $changes['split_percent'], (string) $assignment->getKey());
+                }
+                $assignment->update($changes);
+            });
 
-            return $this->successResponse($assignment->load(['task', 'user']), 'Assignment updated successfully');
+            $fresh = TaskAssignment::query()->withoutGlobalScopes()->with(['task', 'user'])->findOrFail($assignment->getKey());
+
+            return $this->successResponse($fresh, 'Assignment updated successfully');
+        } catch (TaskAssignmentShareException $e) {
+            return $this->errorResponse($e->getMessage(), $e->reason === TaskAssignmentShareException::REASON_TASK_NOT_FOUND ? 404 : 400);
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to update assignment: ' . $e->getMessage(), 500);
         }

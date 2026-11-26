@@ -222,5 +222,6 @@
     "2026_11_05_170000_create_labour_cost_allocations_table": "expand",
     "2026_11_05_190000_create_overhead_tables": "expand",
     "2026_11_10_100000_add_tenant_id_to_project_milestones": "expand",
-    "2026_11_24_200000_own_2026_024_h2b_rbac_revocations_and_platform_operators": "expand"
+    "2026_11_24_200000_own_2026_024_h2b_rbac_revocations_and_platform_operators": "expand",
+    "2026_11_26_100000_add_split_percent_to_task_assignments": "expand"
 }

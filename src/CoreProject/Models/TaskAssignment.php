@@ -2,6 +2,7 @@
 
 namespace Src\CoreProject\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -20,6 +21,13 @@ use Src\Compensation\Models\TaskCompensation;
 class TaskAssignment extends Model
 {
     use HasTimestamps;
+    // OWN-2026-024 SPLIT-PERCENT: task_assignments.id is CHAR(26) with no default. Without ULID generation every v1 insert
+    // failed on MySQL (1364 "Field 'id' doesn't have a default value"); SQLite silently stored a NULL primary key.
+    use HasUlids;
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
 
     protected $table = 'task_assignments';
     
@@ -27,11 +35,17 @@ class TaskAssignment extends Model
         'task_id',
         'user_id',
         'split_percent', // Đã đổi tên từ split_percentage
-        'role'
+        'role',
+        // OWN-2026-024 SPLIT-PERCENT: set by the controller from the task / actor, never from request input.
+        'tenant_id',
+        'assigned_at',
+        'assigned_by',
     ];
 
     protected $casts = [
-        'split_percent' => 'float'
+        'split_percent' => 'float',
+        // OWN-2026-024: assigned_at is now written on every v1 path; the resource formats it as a date (was always NULL here).
+        'assigned_at' => 'datetime',
     ];
 
     protected $attributes = [

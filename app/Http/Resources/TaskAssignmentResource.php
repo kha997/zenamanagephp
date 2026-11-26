@@ -27,7 +27,9 @@ class TaskAssignmentResource extends JsonResource
             'id' => $this->id,
             'task_id' => $this->task_id,
             'user_id' => $this->user_id,
-            'split_percentage' => (float) $this->split_percentage,
+            // OWN-2026-024 SPLIT-PERCENT: stored column split_percent (legacy key kept for compatibility).
+            'split_percent' => $this->storedSplitPercent(),
+            'split_percentage' => $this->storedSplitPercent(),
 
             // Computed fields
             'workload_hours' => $this->getWorkloadHours(),
@@ -41,5 +43,13 @@ class TaskAssignmentResource extends JsonResource
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
+    }
+
+    /** OWN-2026-024 SPLIT-PERCENT: the stored share (NULL = not recorded). */
+    private function storedSplitPercent(): ?float
+    {
+        $value = $this->resource->getAttribute('split_percent');
+
+        return $value === null ? null : (float) $value;
     }
 }

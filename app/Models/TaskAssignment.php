@@ -29,6 +29,10 @@ class TaskAssignment extends Model
         'team_id',
         'assignment_type',
         'role',
+        // OWN-2026-024 SPLIT-PERCENT: the canonical workload share and the assigning actor are persisted (they were silently
+        // dropped by mass assignment before; see TaskAssignmentShares).
+        'split_percent',
+        'assigned_by',
         'assigned_hours',
         'actual_hours',
         'status',
@@ -51,6 +55,7 @@ class TaskAssignment extends Model
     ];
 
     protected $casts = [
+        'split_percent' => 'float',
         'assigned_hours' => 'decimal:2',
         'actual_hours' => 'decimal:2',
         'assigned_at' => 'datetime',

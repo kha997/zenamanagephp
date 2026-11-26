@@ -23,7 +23,10 @@ class TaskAssignmentResource extends BaseApiResource
             'ulid' => $this->formatUlid($this->ulid),
             'task_id' => $this->task_id,
             'user_id' => $this->user_id,
-            'split_percentage' => $this->formatDecimal($this->split_percentage),
+            // OWN-2026-024 SPLIT-PERCENT: the stored column is split_percent; `split_percentage` is kept as the existing
+            // response key (compatibility) and now carries the stored value instead of an always-empty attribute.
+            'split_percent' => $this->formatDecimal($this->split_percent),
+            'split_percentage' => $this->formatDecimal($this->split_percent),
             'assigned_at' => $this->formatDateTime($this->assigned_at),
             'created_at' => $this->formatDateTime($this->created_at),
             'updated_at' => $this->formatDateTime($this->updated_at),
@@ -47,7 +50,7 @@ class TaskAssignmentResource extends BaseApiResource
             return 0.0;
         }
         
-        return (float) ($this->task->estimated_hours * $this->split_percentage / 100);
+        return (float) ($this->task->estimated_hours * $this->split_percent / 100);
     }
     
     /**
@@ -59,6 +62,6 @@ class TaskAssignmentResource extends BaseApiResource
             return 0.0;
         }
         
-        return (float) ($this->task->actual_hours * $this->split_percentage / 100);
+        return (float) ($this->task->actual_hours * $this->split_percent / 100);
     }
 }

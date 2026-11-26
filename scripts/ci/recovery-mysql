@@ -49,9 +49,17 @@ echo "Recovery on MySQL: server version ${mysql_version}"
 
 ./vendor/bin/phpunit "${SELECTION[@]}" --list-tests-xml "$LIST_OUT" > /dev/null
 
+# Per-test diagnostic log (test id + start/end timestamps, flushed as each event happens). If the job is cancelled before
+# PHPUnit writes the JUnit report, the uploaded artifact still shows the last test that was prepared but never finished.
+EVENTS_OUT="$OUT_DIR/recovery-mysql-events.txt"
+
 set +e
-./vendor/bin/phpunit "${SELECTION[@]}" --log-junit "$JUNIT_OUT"
+./vendor/bin/phpunit "${SELECTION[@]}" --log-junit "$JUNIT_OUT" --log-events-verbose-text "$EVENTS_OUT"
 phpunit_exit=$?
 set -e
+
+# Must never abort the script (set -e / pipefail): a missing or empty events file is exactly the case it diagnoses.
+last_started="$( { grep -E 'Test Prepared \(' "$EVENTS_OUT" 2>/dev/null || true; } | tail -1 | sed -E 's/.*Test Prepared \((.*)\)$/\1/')"
+echo "Last test started (on a hang or crash, the one that never finished): ${last_started:-none}"
 
 php scripts/ci/recovery-mysql-report.php "$LIST_OUT" "$JUNIT_OUT" scripts/ci/recovery-mysql-known-failures.txt "$mysql_version" "$phpunit_exit"

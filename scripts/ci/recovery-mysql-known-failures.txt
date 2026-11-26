@@ -1,5 +1,5 @@
 # OWN-2026-024 — documented Recovery failures on MySQL/MariaDB (baseline MAP only; listing a test here never makes it pass).
 # Format: <Fully\Qualified\Class>::<method><TAB><baseline defect id and source>
-# Observed on isolated MariaDB 10.4 (docs/audits/UAT-RECOVERY-01/103 §8, 104 §8, 105 §10); not yet observed on MySQL 8.
-Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_unauthorised_actors_cannot_assign_reassign_or_unassign_on_any_surface	SPLIT-PERCENT: task_assignments.split_percent missing from migrations -> v1 assignment 500 on MySQL (O-18 report; separate fix)
-Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_owning_project_pm_is_authorised_on_the_assignment_surfaces	SPLIT-PERCENT: task_assignments.split_percent missing from migrations -> v1 assignment 500 on MySQL (O-18 report; separate fix)
+# Observed on isolated MariaDB 10.4 and on MySQL 8.0.46 (official image mysql:8.0.46, local verification 2026-11-26): SQLSTATE[42S22] 1054 Unknown column 'split_percent'. No migration defines the column; SQLite masks it (a double-quoted unknown identifier becomes a string literal, sum = 0).
+Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_unauthorised_actors_cannot_assign_reassign_or_unassign_on_any_surface	SPLIT-PERCENT: v1 CoreProject assignment store -> src/CoreProject/Requests/StoreTaskAssignmentRequest.php:76 sum('split_percent') -> 500 (separate fix)
+Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_owning_project_pm_is_authorised_on_the_assignment_surfaces	SPLIT-PERCENT: dashboard assignment store -> app/Http/Controllers/Api/TaskAssignmentController.php:105 sum('split_percent') -> 500 (separate fix)

@@ -336,9 +336,32 @@ class UatRecovery07cO17hH2bTest extends TestCase
         $this->assertContains($response->status(), [200, 500]);
         $this->assertSame(['platform.operation.requested', 'platform.operation.completed'], DB::table('audit_logs')->where('action', 'like', 'platform.operation.%')->orderBy('id')->pluck('action')->slice(-2)->values()->all());
 
+        // On MySQL the backup shells out to mysqldump (default --lock-tables). Run for real from inside this test's
+        // RefreshDatabase transaction, its LOCK TABLES … READ waits on that transaction's metadata locks while the test waits
+        // on mysqldump — a cross-connection self-deadlock until Process::timeout(3600) (root cause of the CI Recovery-on-MySQL
+        // hang). The external process is faked; the guarded route, the controller and every assertion below still run.
+        // The fake behaves like a successful mysqldump (writes the requested --result-file), so the controller's SUCCESS path is
+        // exercised on MySQL. This proves only the HTTP/authorization contract — not that a real production backup is safe.
+        $backupsBefore = glob(storage_path('backups/*')) ?: [];
+        \Illuminate\Support\Facades\Process::fake(static function ($process) {
+            foreach ((array) $process->command as $argument) {
+                if (is_string($argument) && str_starts_with($argument, '--result-file=')) {
+                    file_put_contents(substr($argument, strlen('--result-file=')), "-- faked dump (test)\n");
+                }
+            }
+
+            return \Illuminate\Support\Facades\Process::result('');
+        });
         $backup = $this->postJson('/admin/maintenance/backup-database', ['confirm_operation' => 'backup.database']);
+        foreach (array_diff(glob(storage_path('backups/*')) ?: [], $backupsBefore) as $created) {
+            @unlink($created);
+        }
         $this->assertStringStartsWith('application/json', (string) $backup->headers->get('Content-Type'), 'a full backup is never downloadable over HTTP');
         $this->assertNull($backup->headers->get('Content-Disposition'));
+        if (DB::connection()->getDriverName() === 'mysql') {
+            \Illuminate\Support\Facades\Process::assertRan(static fn ($process): bool => str_contains(implode(' ', (array) $process->command), 'mysqldump'));
+            $backup->assertOk(); // success path (faked dump file present), not the "Backup file is empty" 500
+        }
     }
 
     // ===================================================================== preservation

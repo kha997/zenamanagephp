@@ -570,7 +570,10 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
+    # A failed SARIF upload (reporting only) must never skip the JSON report or the blocking HIGH/CRITICAL gate below;
+    # the upload step itself stays blocking, so its failure still fails this job visibly.
     - name: Run Trivy vulnerability scanner (JSON)
+      if: ${{ !cancelled() }}
       uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: 'zenamanage:test'
@@ -578,6 +581,7 @@ jobs:
         output: 'trivy-results.json'
 
     - name: Upload Trivy JSON results
+      if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v7
       with:
         name: trivy-results
@@ -609,6 +613,11 @@ jobs:
             }
           }
           const fs = require('fs');
+          if (!fs.existsSync('trivy-results.json')) {
+            core.warning('trivy-results.json is missing: the JSON scan did not produce a report; the HIGH/CRITICAL gate step is authoritative.');
+            await syncReport('docker', '## Docker Security Scan Report\n\nScan results are unavailable for this run (no `trivy-results.json`). The blocking HIGH/CRITICAL gate step is authoritative.');
+            return;
+          }
           const trivyResults = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
 
           let body = '';
@@ -628,6 +637,7 @@ jobs:
 
     # GAP-083: Trivy reads .trivyignore by default; exceptions go there, each with a reason comment.
     - name: Fail on fixable HIGH/CRITICAL image vulnerabilities
+      if: ${{ !cancelled() }}
       uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: 'zenamanage:test'

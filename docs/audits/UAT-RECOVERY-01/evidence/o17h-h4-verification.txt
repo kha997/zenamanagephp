@@ -1,0 +1,35 @@
+# OWN-2026-024 (O-17h) H4 — verification summary (2026-11-25). Local runs only; no production/staging access; H0 not executed.
+## SQLite, sequential, final tree
+feature: Tests: 2302, Assertions: 23984, PHPUnit Deprecations: 134, Skipped: 33.
+api: Tests: 825, Assertions: 5284, PHPUnit Deprecations: 101.
+unit: Tests: 960, Assertions: 3696, Failures: 5, PHPUnit Deprecations: 335, Skipped: 27.
+  1) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_waits_while_pending_then_passes_when_all_checks_pass
+  2) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_fails_on_the_first_poll_when_a_check_has_failed
+  3) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_a_cancelled_check_counts_as_failed
+  4) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_fails_after_the_last_poll_when_checks_are_still_pending
+  5) Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_its_own_check_is_ignored
+integration: Tests: 31, Assertions: 230, PHPUnit Deprecations: 62.
+red group: No tests executed!
+## Policy tests touched by H4
+DocumentAssignApproverPolicyTest: OK (4 tests, 5 assertions)
+DocumentPolicySimpleTest: OK (5 tests, 7 assertions)
+DocumentPolicyTest: OK (13 tests, 28 assertions)
+PolicyTest: Tests: 5, Assertions: 88, PHPUnit Deprecations: 5.
+SanctumBearerTransportGuardContractTest: OK (17 tests, 63 assertions)
+SecurityPenetrationTest: OK (21 tests, 194 assertions)
+SidebarConfigTest: Tests: 5, Assertions: 14, PHPUnit Deprecations: 5.
+SimplePolicyTest: Tests: 3, Assertions: 24, PHPUnit Deprecations: 3.
+UatRecovery03DocumentPolicyAlignmentTest: OK (25 tests, 114 assertions)
+## Mutation checks
+remove authorize('delete') in destroy -> Tests: 1, Assertions: 1, Failures: 1.
+tripwire single-line probe -> Tests: 1, Assertions: 1, Failures: 1.
+tripwire multi-line Gate::allows probe -> Tests: 1, Assertions: 1, Failures: 1.
+## Isolated MariaDB 10.4.28
+security+policy files: Tests: 105, Assertions: 1930, PHPUnit Deprecations: 5.
+H4 files after final edits: Tests: 32, Assertions: 138, PHPUnit Deprecations: 5.
+Recovery (CI exclusions): Tests: 221, Assertions: 3102, Failures: 2.
+  1) Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_unauthorised_actors_cannot_assign_reassign_or_unassign_on_any_surface
+  2) Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_owning_project_pm_is_authorised_on_the_assignment_surfaces
+document-route Feature files (10): Tests: 145, Assertions: 827, PHPUnit Deprecations: 2.
+## Static: phpstan OK; composer ssot:lint exit 0; owner-governance-lint PASS; --enforce-gate-ordering PASS; lint-mysql-claim-truthfulness PASS; php-cs-fixer clean on H4 files
+## Not verified: MySQL 8; Dusk browser tests (CI only); performance group

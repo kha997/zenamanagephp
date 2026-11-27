@@ -2,6 +2,7 @@
 
 namespace Src\CoreProject\Controllers;
 
+use App\Support\TaskCreationAuthority;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
@@ -13,6 +14,7 @@ use Src\CoreProject\Requests\UpdateTaskRequest;
 use Src\CoreProject\Services\TaskService;
 use Src\CoreProject\Services\ConditionalTagService;
 use Src\RBAC\Middleware\RBACMiddleware;
+use Illuminate\Support\Facades\Auth;
 use Src\Foundation\Utils\JSendResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\Rule;
@@ -39,6 +41,19 @@ class TaskController
         // $this->middleware(RBACMiddleware::class);
         $this->taskService = $taskService;
         $this->conditionalTagService = $conditionalTagService;
+    }
+
+    /**
+     * UAT-RECOVERY-04b (O-13): authorise against the CANONICAL task policy. This controller works on
+     * Src\CoreProject\Models\Task, which has no registered policy (Gate would deny everyone), so the decision
+     * is taken on the App\Models\Task row for the same id. Fail-closed when the row/actor is missing.
+     */
+    private function actorCan(string $ability, string $taskId): bool
+    {
+        $actor = Auth::guard('api')->user() ?? Auth::user();
+        $canonical = \App\Models\Task::query()->whereKey($taskId)->first();
+
+        return $actor !== null && $canonical !== null && $actor->can($ability, $canonical);
     }
 
     /**
@@ -144,8 +159,14 @@ class TaskController
             $data = $request->validated();
             $data['project_id'] = $projectId;
 
-            // Sử dụng TaskService để tạo task với validation đầy đủ
-            $task = $this->taskService->createTask($data);
+            // Sử dụng TaskService để tạo task với validation đầy đủ.
+            // O-17 Gate 6: creation and its audit row commit or roll back together (authority: StoreTaskRequest::authorize()).
+            $task = DB::transaction(function () use ($data, $request) {
+                $task = $this->taskService->createTask($data);
+                TaskCreationAuthority::audit($request->user('api') ?? $request->user(), $task, 'api.v1.tasks.store');
+
+                return $task;
+            });
 
             // Load relationships
             $task->load(['component', 'assignments.user', 'project']);
@@ -199,6 +220,11 @@ class TaskController
                 ->where('id', $task)
                 ->firstOrFail();
 
+            // UAT-RECOVERY-04b (O-13): same object-level boundary as the app/web task controllers.
+            if (!$this->actorCan('update', (string) $taskModel->id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
+
             $data = $request->validated();
 
             // Sử dụng TaskService để update với validation dependencies
@@ -232,6 +258,10 @@ class TaskController
             $task = Task::where('tenant_id', $this->currentTenantId())
                 ->where('id', $task)
                 ->firstOrFail();
+
+            if (!$this->actorCan('delete', (string) $task->id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
 
             // Kiểm tra assignments
             if ($task->assignments()->exists()) {

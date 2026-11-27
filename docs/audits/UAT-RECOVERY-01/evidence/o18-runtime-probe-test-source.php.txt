@@ -1,0 +1,115 @@
+<?php
+declare(strict_types=1);
+namespace Tests\Feature\Probe;
+
+use App\Models\Account;
+use App\Models\Contract;
+use App\Models\Opportunity;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\TimeTracking\TimeEntry;
+use App\Models\User;
+use App\Services\TimeTracking\TimeEntryService;
+use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+
+/** O-18 read-only runtime probe (scratchpad only; never committed). Isolated in-memory SQLite. */
+class O18RuntimeProbeTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function member(Tenant $t, string $name): User
+    {
+        $u = User::factory()->create(['tenant_id' => $t->id, 'role' => null, 'name' => $name]);
+        DB::table('user_roles')->insert(['user_id' => $u->id, 'role_id' => DB::table('roles')->where('name', 'Project Member')->value('id'), 'created_at' => now(), 'updated_at' => now()]);
+        return $u;
+    }
+
+    private function fixtures(): array
+    {
+        $t = Tenant::factory()->create();
+        $a = $this->member($t, 'Member A');
+        $b = $this->member($t, 'Member B');
+        $p = Project::factory()->create(['tenant_id' => $t->id, 'pm_id' => null]); // A is NOT a participant
+        $acc = Account::query()->create(['tenant_id' => (string) $t->id, 'display_name' => 'Probe Account']);
+        $opp = Opportunity::query()->create(['tenant_id' => (string) $t->id, 'account_id' => (string) $acc->id, 'opportunity_name' => 'Probe Opp', 'pipeline_stage' => Opportunity::STAGE_BRIEF_DISCOVERY, 'sales_owner_id' => (string) $b->id, 'created_by' => (string) $b->id]);
+        $c = Contract::factory()->create(['tenant_id' => $t->id, 'project_id' => $p->id, 'created_by' => $b->id]);
+        return compact('t', 'a', 'b', 'p', 'opp', 'c');
+    }
+
+    private function probe(array $f, string $label): array
+    {
+        $a = $f['a'];
+        $codes = fn () => DB::table('role_permissions')->join('roles', 'roles.id', '=', 'role_permissions.role_id')->join('permissions', 'permissions.id', '=', 'role_permissions.permission_id')->where('roles.name', 'Project Member')->count();
+        $r = ['label' => $label, 'member_grants' => $codes()];
+        $r['GET operator/crm'] = $this->actingAs($a)->get('/operator/crm')->status();
+        $r['GET operator/crm/opportunities/{other}'] = $this->actingAs($a)->get('/operator/crm/opportunities/' . $f['opp']->id)->status();
+        $r['GET api/zena/crm/opportunities'] = $this->actingAs($a, 'sanctum')->getJson('/api/zena/crm/opportunities')->status();
+        $r['POST operator/crm/opportunities/{id}/ai-summary'] = $this->actingAs($a)->post('/operator/crm/opportunities/' . $f['opp']->id . '/ai-summary')->status();
+        $r['GET api/zena/projects/{nonParticipant}/contracts'] = $this->actingAs($a, 'sanctum')->getJson('/api/zena/projects/' . $f['p']->id . '/contracts')->status();
+        $r['GET operator/contracts/{id}'] = $this->actingAs($a)->get('/operator/contracts/' . $f['c']->id)->status();
+        $r['GET api/zena/vendors'] = $this->actingAs($a, 'sanctum')->getJson('/api/zena/vendors')->status();
+        $r['GET api/zena/boqs'] = $this->actingAs($a, 'sanctum')->getJson('/api/zena/boqs')->status();
+        $r['GET app/my-work'] = $this->actingAs($a)->get('/app/my-work')->status();
+        $r['GET app/time'] = $this->actingAs($a)->get('/app/time')->status();
+        $r['GET app/time/report'] = $this->actingAs($a)->get('/app/time/report')->status();
+        $r['GET app/time/report?export=csv'] = $this->actingAs($a)->get('/app/time/report?export=csv')->status();
+        $r['GET app/time/review'] = $this->actingAs($a)->get('/app/time/review')->status();
+        return $r;
+    }
+
+    public function test_probe_after_one_seed(): void
+    {
+        Carbon::setTestNow('2026-11-05 09:00:00');
+        $this->seed(DatabaseSeeder::class);
+        $f = $this->fixtures();
+        file_put_contents(getenv('O18_OUT') . '.seed1.json', json_encode([$this->probe($f, 'after seed #1')], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->assertTrue(true);
+    }
+
+    public function test_probe_after_two_seeds(): void
+    {
+        Carbon::setTestNow('2026-11-05 09:00:00');
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
+        $f = $this->fixtures();
+        $out[] = $this->probe($f, 'after seed #2');
+        $entry = app(TimeEntryService::class)->addManual($f['b'], ['category' => TimeEntry::CATEGORY_ADMIN, 'work_date' => '2026-11-04', 'minutes' => '60', 'note' => 'B own entry']);
+        $before = $entry->fresh()->toArray();
+        $x = [];
+        $x['POST app/time/entries/{B} (edit)'] = $this->actingAs($f['a'])->post('/app/time/entries/' . $entry->id, ['work_date' => '2026-11-04', 'minutes' => 480, 'note' => 'tamper'])->status();
+        $x['edit session errors'] = session('errors')?->getBag('default')->all();
+        $x['POST app/time/entries/{B}/delete'] = $this->actingAs($f['a'])->post('/app/time/entries/' . $entry->id . '/delete')->status();
+        $x['delete session errors'] = session('errors')?->getBag('default')->all();
+        $x['POST app/time/review approve {B}'] = $this->actingAs($f['a'])->post('/app/time/review', ['ids' => [(string) $entry->id], 'action' => 'approve'])->status();
+        $after = TimeEntry::query()->withoutGlobalScopes()->find($entry->id)?->toArray();
+        $x['B entry unchanged'] = $after !== null && $after['minutes'] === $before['minutes'] && $after['status'] === $before['status'] && $after['note'] === $before['note'];
+        $x['A entries count'] = TimeEntry::query()->withoutGlobalScopes()->where('user_id', $f['a']->id)->count();
+        $out[] = ['label' => 'cross-user timesheet (seed #2)'] + $x;
+        file_put_contents(getenv('O18_OUT') . '.seed2.json', json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->assertTrue(true);
+    }
+}
+<?php
+declare(strict_types=1);
+namespace Tests\Feature\Probe;
+use App\Models\Tenant; use App\Models\User; use App\Models\Project;
+use Database\Seeders\DatabaseSeeder; use Illuminate\Foundation\Testing\RefreshDatabase; use Illuminate\Support\Facades\DB; use Tests\TestCase;
+class O18PmProbeTest extends TestCase {
+  use RefreshDatabase;
+  public function test_pm_pages(): void {
+    $this->seed(DatabaseSeeder::class);
+    $t = Tenant::factory()->create();
+    $u = User::factory()->create(['tenant_id' => $t->id, 'role' => null]);
+    DB::table('user_roles')->insert(['user_id' => $u->id, 'role_id' => DB::table('roles')->where('name', 'Project Manager')->value('id'), 'created_at' => now(), 'updated_at' => now()]);
+    Project::factory()->create(['tenant_id' => $t->id, 'pm_id' => $u->id]);
+    $r = [];
+    foreach (['/app/my-work', '/app/today', '/app/time', '/operator/schedule', '/operator/crm'] as $p) { $r[$p] = $this->actingAs($u)->get($p)->status(); }
+    file_put_contents(getenv('O18_OUT'), json_encode(['label' => 'seeded Project Manager (owns a project), seed #1', 'results' => $r], JSON_PRETTY_PRINT));
+    $this->assertTrue(true);
+  }
+}

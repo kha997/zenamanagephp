@@ -97,7 +97,7 @@ class WorkTemplateBaselineSeederTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $tenant = Tenant::query()->orderBy('created_at')->firstOrFail();
-        $actor = $this->createActorWithPermissions($tenant, ['template.view', 'template.apply', 'work.view']);
+        $actor = $this->createActorWithPermissions($tenant, ['template.view', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */, 'work.view']);
 
         foreach (WorkTemplateBaselineSeeder::TEMPLATE_DEFINITIONS as $index => $definition) {
             $project = Project::factory()->create([
@@ -157,7 +157,7 @@ class WorkTemplateBaselineSeederTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $tenant = Tenant::query()->orderBy('created_at')->firstOrFail();
-        $actor = $this->createActorWithPermissions($tenant, ['template.view', 'template.apply', 'work.view']);
+        $actor = $this->createActorWithPermissions($tenant, ['template.view', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */, 'work.view']);
         $project = Project::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'created_by' => (string) $actor->id,

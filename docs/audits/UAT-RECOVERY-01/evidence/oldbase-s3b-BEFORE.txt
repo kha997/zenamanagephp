@@ -1,0 +1,58 @@
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+PHPUnit 11.5.56 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.32
+Configuration: <repo>/phpunit.xml
+
+F.FF..........                                                    14 / 14 (100%)
+
+Time: 00:24.375, Memory: 87.00 MB
+
+Uat Recovery03b Project Write Route Gate (Tests\Feature\Recovery\UatRecovery03bProjectWriteRouteGate)
+ ✘ Route table exactly matches the approved mapping
+   │
+   │ store: exactly one specific gate
+   │ Failed asserting that actual size 0 matches expected size 1.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery03bProjectWriteRouteGateTest.php:110
+   │
+ ✔ Route names and every other parameterless route are unchanged
+ ✘ Seeded system admin reaches every write route
+   │
+   │ store
+   │ Failed asserting that 403 is identical to 201.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery03bProjectWriteRouteGateTest.php:142
+   │
+ ✘ Seeded project manager can create update but not delete
+   │
+   │ Failed asserting that 403 is identical to 201.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery03bProjectWriteRouteGateTest.php:157
+   │
+ ✔ Actors without the permission are denied with zero mutation with data set "store"
+ ✔ Actors without the permission are denied with zero mutation with data set "update PUT"
+ ✔ Actors without the permission are denied with zero mutation with data set "update PATCH"
+ ✔ Actors without the permission are denied with zero mutation with data set "destroy"
+ ✔ Actors without the permission are denied with zero mutation with data set "status"
+ ✔ Actors without the permission are denied with zero mutation with data set "recalculate-progress"
+ ✔ Actors without the permission are denied with zero mutation with data set "recalculate-actual-cost"
+ ✔ Users who already worked still work
+ ✔ Cross tenant write is denied even for a permission holder
+ ✔ Read routes keep the parameterless gate semantics
+
+FAILURES!
+Tests: 14, Assertions: 240, Failures: 3.

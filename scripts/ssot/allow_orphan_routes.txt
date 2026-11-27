@@ -10,3 +10,18 @@
 /api/project-templates/{template}/create-project|reason=NEGATIVE_PROBE_LEGACY_SURFACE
 /api/project-templates/{template}/duplicate|reason=NEGATIVE_PROBE_LEGACY_SURFACE
 /api/badges|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+# OWN-2026-024 H2a (Owner Gate 2, D2): retired mock / legacy host-console routes; negative probes in UatRecovery07bO17hH2aPlatformTest.
+/api/admin/dashboard/activities|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/admin/dashboard/alerts|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/activities|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/activities/by-type|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/activities/stats|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/alerts|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/alerts/stats|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/alerts/acknowledge|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/alerts/mute|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/alerts/dismiss-all|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/filters/presets|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/filters/deep|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/filters/saved-views|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/v1/universal-frame/filters/saved-views/1|reason=NEGATIVE_PROBE_LEGACY_SURFACE

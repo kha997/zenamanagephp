@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Support\TaskCreationAuthority;
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -358,7 +360,15 @@ class BulkOperationsService
                         $project = Project::findOrFail($update['id']);
                         $oldData = $project->toArray();
 
+                        // UAT-RECOVERY-04b (O-11): pm_id is PM authority; bulk edits obey the same rule as the project update endpoint.
+                        $actor = Auth::user() ?? Auth::guard('api')->user();
+                        if (array_key_exists('pm_id', $update['data'] ?? []) && !\App\Support\ProjectPmAssignment::allows($actor, $project, $update['data']['pm_id'])) {
+                            throw new \RuntimeException('Forbidden: pm_id change not permitted');
+                        }
+
+                        $oldPm = $project->pm_id === null ? null : (string) $project->pm_id;
                         $project->update($update['data']);
+                        \App\Support\ProjectPmAssignment::audit($actor, $project, $oldPm, $project->pm_id === null ? null : (string) $project->pm_id, 'bulk.project.update');
                         $results['updated_projects'][] = $project;
                         $results['success']++;
 
@@ -405,6 +415,16 @@ class BulkOperationsService
     {
         $this->validateBulkOperation(count($taskData), 'create_tasks');
 
+        // CB-3: the tenant is the authenticated actor's, never a caller-supplied value. A conflicting tenant id is refused.
+        $actor = Auth::user();
+        if (!$actor instanceof User) {
+            throw new AuthorizationException('Authentication required for bulk task creation.');
+        }
+        $actorTenantId = (string) $actor->tenant_id;
+        if ($tenantId !== null && $tenantId !== '' && $tenantId !== $actorTenantId) {
+            throw new \InvalidArgumentException('tenant_id does not match the authenticated tenant.');
+        }
+
         $results = [
             'success' => 0,
             'failed' => 0,
@@ -413,31 +433,54 @@ class BulkOperationsService
             'created_tasks' => [],
         ];
 
+        /** @var array<string, Project|null> $projects */
+        $projects = [];
+
         try {
             DB::beginTransaction();
 
             foreach (array_chunk($taskData, $this->batchSize) as $batch) {
                 foreach ($batch as $index => $data) {
                     try {
-                        $data['project_id'] = $projectId ?? $data['project_id'] ?? null;
-                        $task = $this->createTask($data, $tenantId);
+                        $rowProjectId = (string) ($projectId ?? ($data['project_id'] ?? ''));
+                        if (!array_key_exists($rowProjectId, $projects)) {
+                            $projects[$rowProjectId] = $rowProjectId === '' ? null : Project::query()
+                                ->where('tenant_id', $actorTenantId)
+                                ->whereKey($rowProjectId)
+                                ->first();
+                        }
+                        $project = $projects[$rowProjectId];
+                        if ($project === null) {
+                            throw new \InvalidArgumentException('Project not found in the authenticated tenant.');
+                        }
+
+                        // O-17 Option B, decided per row inside the service (defence in depth for every caller).
+                        $denial = TaskCreationAuthority::denialReason($actor, $project);
+                        if ($denial !== null) {
+                            TaskCreationAuthority::logDenial($actor, $project, $denial, 'bulk.tasks.create');
+
+                            throw new AuthorizationException('Not authorised to create tasks in this project.');
+                        }
+
+                        $row = $this->taskRow($data);
+                        if (isset($row['assignee_id']) && !TaskCreationAuthority::eligibleAssignee($project, $row['assignee_id'])) {
+                            throw new \InvalidArgumentException('assignee_id must be the project manager or an active participant of this project.');
+                        }
+
+                        // Savepoint per row: the task and its audit record commit or roll back together.
+                        $task = DB::transaction(function () use ($row, $project, $actor): Task {
+                            $task = $this->createTask($row, $project, $actor);
+                            TaskCreationAuthority::audit($actor, $task, 'bulk.tasks.create');
+
+                            return $task;
+                        });
+
                         $results['created_tasks'][] = $task->id;
                         $results['success']++;
-
-                        // Log creation
-                        $this->auditService->logAction(
-                            userId: Auth::guard('api')->id() ?? 'system',
-                            action: 'bulk_task_create',
-                            entityType: 'Task',
-                            entityId: $task->id,
-                            projectId: $projectId,
-                            newData: $data
-                        );
                     } catch (\Exception $e) {
                         $results['failed']++;
                         $results['errors'][] = [
                             'index' => $index,
-                            'data' => $data,
                             'error' => $e->getMessage(),
                         ];
                     }
@@ -482,6 +525,15 @@ class BulkOperationsService
 
                 foreach ($tasks as $task) {
                     try {
+                        // UAT-RECOVERY-04b (O-13): per-task object authorization, tenant-bound; denied tasks are reported, not changed.
+                        /** @var \App\Models\User|null $actor */
+                        $actor = Auth::user() ?? Auth::guard('api')->user();
+                        if (!$actor || !$actor->can('update', $task)) {
+                            $results['failed']++;
+                            $results['errors'][] = ['task_id' => $task->id, 'error' => 'Forbidden'];
+                            continue;
+                        }
+
                         $oldData = $task->toArray();
                         $task->update(['status' => $status]);
 
@@ -628,11 +680,33 @@ class BulkOperationsService
     /**
      * Create task with validation.
      */
-    private function createTask(array $data, string $tenantId = null): Task
+    /**
+     * Only plain task fields are taken from a bulk row. Identity and ownership columns (tenant_id, project_id, created_by, ids,
+     * parent/dependency links, ...) are never mass-assigned from input.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function taskRow(array $data): array
     {
-        $data['tenant_id'] = $tenantId ?? Auth::user()?->tenant_id;
+        $row = array_intersect_key($data, array_flip([
+            'name', 'title', 'description', 'status', 'priority', 'start_date', 'end_date', 'estimated_hours', 'assignee_id',
+        ]));
+        if (!isset($row['name']) && isset($row['title'])) {
+            $row['name'] = $row['title'];
+        }
 
-        return Task::create($data);
+        return $row;
+    }
+
+    /** @param array<string, mixed> $row */
+    private function createTask(array $row, Project $project, User $actor): Task
+    {
+        return Task::create(array_merge($row, [
+            'tenant_id' => (string) $project->tenant_id,
+            'project_id' => (string) $project->id,
+            'created_by' => (string) $actor->id,
+        ]));
     }
 
     /**

@@ -1,0 +1,84 @@
+# OWN-2026-024 H2a — the 80 former rbac:admin host routes: H1 class, references found (UI / app+routes / tests incl. fixtures), H2a outcome and gate.
+# D2 rule applied strictly: only routes in the 37-route mock/legacy set with ZERO references of any kind were retired. Reference counts: literal path or route-name use in resources/ public/js public/build (UI), app/ src/ config/ routes/ (code), tests/ (tests + fixtures).
+method	uri	h1_class	ui_refs	code_refs	test_refs	h2a_outcome	h2a_gate
+POST	api/v1/final-integration/complete-launch-task	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/execute-action	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/launch-actions	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/launch-preparation-tasks	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/pre-launch-actions	CHECK-ONLY (GAP-057)	0	0	1	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/production-readiness-checks	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/run-production-check	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/system-integration-checks	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/toggle-checklist-item	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	api/v1/final-integration/validate-integration	CHECK-ONLY (GAP-057)	0	0	0	kept + re-gated	platform.ops.view
+POST	admin/maintenance/cleanup-logs	DESTRUCTIVE	0	0	1	kept + re-gated	platform.maintenance.execute
+POST	admin/maintenance/database	DESTRUCTIVE	0	0	2	kept + re-gated	platform.maintenance.execute
+POST	api/legacy-routes/cleanup	DESTRUCTIVE	0	0	3	kept + re-gated	platform.maintenance.execute
+POST	api/cache/clear	MUTATING-SHARED	0	0	1	kept + re-gated	platform.cache.manage
+POST	api/cache/invalidate/key	MUTATING-SHARED	0	0	4	kept + re-gated	platform.cache.manage
+POST	api/cache/invalidate/pattern	MUTATING-SHARED	0	0	2	kept + re-gated	platform.cache.manage
+POST	api/cache/invalidate/tags	MUTATING-SHARED	0	0	1	kept + re-gated	platform.cache.manage
+POST	api/cache/warmup	MUTATING-SHARED	0	0	2	kept + re-gated	platform.cache.manage
+POST	api/legacy-routes/record-usage	MUTATING-SHARED	0	0	0	kept + re-gated	platform.maintenance.execute
+POST	api/websocket/broadcast	MUTATING-SHARED	0	0	3	kept + re-gated	platform.realtime.broadcast
+POST	api/websocket/notification	MUTATING-SHARED	0	0	2	kept + re-gated	platform.realtime.broadcast
+GET	api/websocket/test	MUTATING-SHARED	0	0	4	kept + re-gated	platform.realtime.broadcast
+POST	api/v1/performance/implement-caching	MUTATING-SHARED (effect unverified)	0	0	0	kept + re-gated	platform.maintenance.execute
+POST	api/v1/performance/optimize-api	MUTATING-SHARED (effect unverified)	0	0	0	kept + re-gated	platform.maintenance.execute
+POST	api/v1/performance/optimize-assets	MUTATING-SHARED (effect unverified)	0	0	0	kept + re-gated	platform.maintenance.execute
+POST	api/v1/performance/optimize-database	MUTATING-SHARED (effect unverified)	0	0	0	kept + re-gated	platform.maintenance.execute
+POST	api/v1/universal-frame/alerts/acknowledge	MUTATING-TENANT-UI (mock)	0	0	0	RETIRED (zero references)	-
+POST	api/v1/universal-frame/alerts/create	MUTATING-TENANT-UI (mock)	0	0	0	kept + re-gated (not provably unused)	platform.realtime.broadcast
+POST	api/v1/universal-frame/alerts/dismiss-all	MUTATING-TENANT-UI (mock)	0	0	0	RETIRED (zero references)	-
+POST	api/v1/universal-frame/alerts/mute	MUTATING-TENANT-UI (mock)	0	0	0	RETIRED (zero references)	-
+POST	api/v1/universal-frame/analysis	MUTATING-TENANT-UI (mock)	0	0	1	kept + re-gated (not provably unused)	platform.ops.view
+POST	api/v1/universal-frame/filters/apply	MUTATING-TENANT-UI (mock)	0	0	0	kept + re-gated (not provably unused)	platform.ops.view
+POST	api/v1/universal-frame/filters/saved-views	MUTATING-TENANT-UI (mock)	0	0	0	RETIRED (zero references)	-
+DELETE	api/v1/universal-frame/filters/saved-views/{viewId}	MUTATING-TENANT-UI (mock)	0	0	0	RETIRED (zero references)	-
+GET	admin	PAGE	118*	174	360	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/activities	PAGE	2*	0	0	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/alerts	PAGE	2*	1	0	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/analytics	PAGE	4*	2	0	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/dashboard	PAGE	0*	0	8	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/maintenance	PAGE	3*	2	10	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/projects	PAGE	5*	2	0	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/security	PAGE	7*	1	0	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/settings	PAGE	6*	6	0	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/sidebar-builder	PAGE	1*	3	0	kept + re-gated (not provably unused)	platform.ops.view
+GET	admin/tasks	PAGE	0*	0	0	RETIRED (zero references)	-
+GET	admin/tenants	PAGE	8*	2	1	kept + re-gated (not provably unused)	admin.company.manage
+GET	admin/users	PAGE	14*	4	1	kept + re-gated (not provably unused)	admin.company.manage
+GET	api/cache/config	READ-HOST	0	0	4	kept + re-gated	platform.ops.view
+GET	api/cache/stats	READ-HOST	0	0	6	kept + re-gated	platform.ops.view
+GET	api/legacy-routes/migration-phase	READ-HOST	0	0	1	kept + re-gated	platform.ops.view
+GET	api/legacy-routes/report	READ-HOST	0	0	1	kept + re-gated	platform.ops.view
+GET	api/legacy-routes/usage	READ-HOST	0	0	3	kept + re-gated	platform.ops.view
+GET	api/v1/final-integration/go-live-checklist	READ-HOST	0	0	0	kept + re-gated	platform.ops.view
+GET	api/v1/final-integration/launch-metrics	READ-HOST	0	0	0	kept + re-gated	platform.ops.view
+GET	api/v1/final-integration/launch-report	READ-HOST	0	0	1	kept + re-gated	platform.ops.view
+GET	api/v1/final-integration/launch-status	READ-HOST	0	0	2	kept + re-gated	platform.ops.view
+GET	api/v1/performance/analysis	READ-HOST	0	0	0	kept + re-gated	platform.ops.view
+GET	api/v1/performance/metrics	READ-HOST	0	0	0	kept + re-gated	platform.ops.view
+GET	api/v1/performance/recommendations	READ-HOST	0	0	0	kept + re-gated	platform.ops.view
+GET	api/websocket/channels	READ-HOST	0	0	1	kept + re-gated	platform.ops.view
+GET	api/websocket/info	READ-HOST	0	0	8	kept + re-gated	platform.ops.view
+GET	api/websocket/stats	READ-HOST	0	0	5	kept + re-gated	platform.ops.view
+GET	api/admin/dashboard/activities	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/admin/dashboard/alerts	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/admin/dashboard/metrics	READ-MOCK	0	0	1	kept + re-gated (not provably unused)	platform.ops.view
+GET	api/admin/dashboard/stats	READ-MOCK	0	0	1	kept + re-gated (not provably unused)	platform.ops.view
+GET	api/v1/universal-frame/activities	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/v1/universal-frame/activities/by-type	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/v1/universal-frame/activities/stats	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/v1/universal-frame/alerts	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/v1/universal-frame/alerts/stats	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/v1/universal-frame/analysis/{context}	READ-MOCK	0	0	1	kept + re-gated (not provably unused)	platform.ops.view
+GET	api/v1/universal-frame/analysis/{context}/charts	READ-MOCK	0	0	1	kept + re-gated (not provably unused)	platform.ops.view
+GET	api/v1/universal-frame/analysis/{context}/insights	READ-MOCK	0	0	1	kept + re-gated (not provably unused)	platform.ops.view
+GET	api/v1/universal-frame/analysis/{context}/metrics	READ-MOCK	0	0	1	kept + re-gated (not provably unused)	platform.ops.view
+GET	api/v1/universal-frame/filters/deep	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/v1/universal-frame/filters/presets	READ-MOCK	0	0	0	RETIRED (zero references)	-
+GET	api/v1/universal-frame/filters/saved-views	READ-MOCK	0	0	0	RETIRED (zero references)	-
+POST	admin/maintenance/clear-cache	REFUSED (GAP-055)	0	0	3	kept + re-gated	platform.maintenance.execute
+POST	admin/maintenance/backup-database	SENSITIVE-EXPORT	0	0	3	kept + re-gated	platform.backup.execute
+# * admin/* page counts include prefix matches of "/admin" and over-count; each kept page also has a named-route or test reference (e.g. AdminRolesCompanyAndSessionTest asserts the /admin/users and /admin/tenants redirects).

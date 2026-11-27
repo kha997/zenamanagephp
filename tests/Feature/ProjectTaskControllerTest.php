@@ -47,6 +47,13 @@ class ProjectTaskControllerTest extends TestCase
         ]);
 
         $this->user->assignRole('super_admin');
+        // OWN-2026-024 H3 fixture: the role name no longer authorizes; grant exactly the route codes (task.view, task.update).
+        $fixtureRole = \App\Models\Role::query()->where('name', 'super_admin')->firstOrFail();
+        foreach (['task.view', 'task.update'] as $code) {
+            [$module, $action] = explode('.', $code, 2);
+            $permission = \App\Models\Permission::firstOrCreate(['code' => $code], ['name' => $code, 'module' => $module, 'action' => $action, 'description' => $code]);
+            $fixtureRole->permissions()->syncWithoutDetaching([$permission->id]);
+        }
 
         $this->token = $this->user->createToken('project-task-test')->plainTextToken;
 

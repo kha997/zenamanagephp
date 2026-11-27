@@ -1,0 +1,232 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Scratch\O17h;
+
+use App\Http\Middleware\VerifyCsrfToken;
+use App\Models\Boq;
+use App\Models\ChangeRequest;
+use App\Models\Contract;
+use App\Models\Project;
+use App\Models\Role;
+use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Models\UserRole;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+/**
+ * Throwaway O-17h probe (scratchpad only, never committed). Synthetic SQLite DB seeded like production
+ * (production:rbac). Actors in tenant A:
+ *  - zeroSA : only role is a role literally named `super_admin` with ZERO permissions (the O-17h subject)
+ *  - legacy : no role rows at all, legacy users.role = 'super_admin'
+ *  - nobody : only role `o17h_nobody`, zero permissions (control)
+ *  - member : seeded production `Project Member` role (normal staff control)
+ *  - realSA : seeded production `super_admin` role (222 canonical grants) — legitimate-dependency reference
+ * Each probe gets fresh targets; side effects are measured by table row counts / column state.
+ */
+class O17hBypassProbeTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Tenant $a;
+
+    private Tenant $b;
+
+    /** @var array<string, User> */
+    private array $actors = [];
+
+    private User $victim;
+
+    private User $userB;
+
+    private Project $pA;
+
+    private Project $pB;
+
+    private Role $realSuper;
+
+    private Role $zeroSuper;
+
+    /** @var list<array<string, mixed>> */
+    private array $log = [];
+
+    public function test_probe_matrix(): void
+    {
+        $this->withoutMiddleware(VerifyCsrfToken::class);
+        Artisan::call('production:rbac');
+
+        $this->a = Tenant::factory()->create();
+        $this->b = Tenant::factory()->create();
+        $this->realSuper = Role::query()->where('name', 'super_admin')->firstOrFail();
+        // roles.name is UNIQUE: a second role named super_admin cannot exist. The zero-permission case is the single global
+        // super_admin role with no grants (production:bootstrap without production:rbac); grants are detached only around zeroSA.
+        $this->zeroSuper = $this->realSuper;
+        $nobody = Role::query()->create(['name' => 'o17h_nobody', 'scope' => 'custom', 'is_active' => true]);
+        $memberRole = Role::query()->where('name', 'Project Member')->firstOrFail();
+
+        $this->actors['zeroSA'] = $this->user($this->a, [$this->zeroSuper]);
+        $this->actors['legacy'] = $this->user($this->a, [], 'super_admin');
+        $this->actors['nobody'] = $this->user($this->a, [$nobody]);
+        $this->actors['member'] = $this->user($this->a, [$memberRole]);
+        $this->actors['realSA'] = $this->user($this->a, [$this->realSuper]);
+        $this->victim = $this->user($this->a, [$nobody]);
+        $this->userB = $this->user($this->b, [$nobody]);
+        $this->pA = Project::factory()->create(['tenant_id' => (string) $this->a->id, 'created_by' => (string) $this->victim->id, 'pm_id' => (string) $this->victim->id]);
+        $this->pB = Project::factory()->create(['tenant_id' => (string) $this->b->id, 'created_by' => (string) $this->userB->id, 'pm_id' => (string) $this->userB->id]);
+
+        foreach ($this->actors as $name => $actor) {
+            $saved = null;
+            if ($name === 'zeroSA') {
+                $saved = DB::table('role_permissions')->where('role_id', (string) $this->realSuper->id)->get()->map(fn ($r) => (array) $r)->all();
+                DB::table('role_permissions')->where('role_id', (string) $this->realSuper->id)->delete();
+                $this->log[] = ['actor' => 'zeroSA', 'probe' => 'setup', 'super_admin_grants_detached' => count($saved), 'remaining' => DB::table('role_permissions')->where('role_id', (string) $this->realSuper->id)->count()];
+            }
+            $this->probes($name, $actor);
+            if ($saved !== null) {
+                DB::table('role_permissions')->where('role_id', (string) $this->realSuper->id)->delete();
+                DB::table('role_permissions')->insert($saved);
+            }
+        }
+
+        file_put_contents((string) getenv('O17H_OUT'), json_encode($this->log, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        $this->assertNotEmpty($this->log);
+    }
+
+    private function probes(string $name, User $actor): void
+    {
+        $a = (string) $this->a->id;
+        $b = (string) $this->b->id;
+        $cA = $this->contract($this->pA, $a);
+        $cB = $this->contract($this->pB, $b);
+        $boqA = $this->boq($this->pA, $a);
+        $boqB = $this->boq($this->pB, $b);
+        $cr = ChangeRequest::factory()->create(['tenant_id' => $a, 'project_id' => (string) $this->pA->id, 'status' => 'submitted', 'requested_by' => (string) $this->victim->id, 'assigned_to' => (string) $this->victim->id]);
+        $task = Task::factory()->create(['tenant_id' => $a, 'project_id' => (string) $this->pA->id, 'created_by' => (string) $this->victim->id]);
+        $vid = (string) $this->victim->id;
+        $docA = \App\Models\Document::factory()->create(['tenant_id' => $a, 'project_id' => (string) $this->pA->id, 'uploaded_by' => $vid, 'title' => 'orig']);
+        $docA2 = \App\Models\Document::factory()->create(['tenant_id' => $a, 'project_id' => (string) $this->pA->id, 'uploaded_by' => $vid, 'title' => 'orig2']);
+
+        $p = [
+            // id, class, method, uri, payload, headers, web?, side-effect probe
+            ['R1 read contracts (own tenant)', 'GET', "api/v1/projects/{$this->pA->id}/contracts"],
+            ['R2 read BOQ list (own tenant)', 'GET', 'api/zena/boqs'],
+            ['R3 read roles catalogue', 'GET', 'api/v1/rbac/roles'],
+            ['R4 read other user effective permissions', 'GET', "api/v1/rbac/users/{$vid}/effective-permissions"],
+            ['R5 rbac:admin dashboard stats', 'GET', 'api/admin/dashboard/stats'],
+            ['R6 rbac:admin cache stats', 'GET', 'api/cache/stats'],
+            ['R7 read CRM leads', 'GET', 'api/zena/crm/leads'],
+            ['R8 rbac:admin web admin/tenants page', 'GET', 'admin/tenants', [], [], true],
+            ['XT1 read tenant-B project contracts', 'GET', "api/v1/projects/{$this->pB->id}/contracts"],
+            ['XT2 read tenant-B contract', 'GET', "api/v1/projects/{$this->pB->id}/contracts/{$cB->id}"],
+            ['XT3 read tenant-B BOQ', 'GET', "api/zena/boqs/{$boqB->id}"],
+            ['XT4 read tenant-B user permissions', 'GET', "api/v1/rbac/users/{$this->userB->id}/effective-permissions"],
+            ['XT5 CRM leads with X-Tenant-ID of B', 'GET', 'api/zena/crm/leads', [], ['X-Tenant-ID' => $b]],
+            ['XT6 delete tenant-B BOQ', 'DELETE', "api/zena/boqs/{$boqB->id}", [], [], false, fn () => $this->rowState('boqs', (string) $boqB->id)],
+            ['XT7 update tenant-B contract', 'PUT', "api/v1/projects/{$this->pB->id}/contracts/{$cB->id}", ['title' => 'o17h-xt'], [], false, fn () => $this->rowState('contracts', (string) $cB->id, 'title')],
+            ['W1 create CRM lead', 'POST', 'api/zena/crm/leads', ['contact_hint' => 'o17h probe lead'], [], false, fn () => DB::table('leads')->count()],
+            ['W2 update own-tenant contract', 'PUT', "api/v1/projects/{$this->pA->id}/contracts/{$cA->id}", ['title' => 'o17h-w2'], [], false, fn () => $this->rowState('contracts', (string) $cA->id, 'title')],
+            ['D1 delete own-tenant BOQ', 'DELETE', "api/zena/boqs/{$boqA->id}", [], [], false, fn () => $this->rowState('boqs', (string) $boqA->id)],
+            ['D2 delete own-tenant contract', 'DELETE', "api/v1/projects/{$this->pA->id}/contracts/{$cA->id}", [], [], false, fn () => $this->rowState('contracts', (string) $cA->id)],
+            ['E1 assign real super_admin role to another user', 'POST', "api/v1/rbac/assignments/users/{$vid}/roles", ['role_id' => (string) $this->realSuper->id], [], false, fn () => DB::table('user_roles')->where('user_id', $vid)->pluck('role_id')->sort()->values()->all()],
+            ['E2 create role', 'POST', 'api/v1/rbac/roles', ['name' => 'o17h_probe_role_' . $name, 'scope' => 'custom'], [], false, fn () => DB::table('roles')->count()],
+            ['E3 grant role.assign to the actor\'s own zero super_admin role', 'POST', "api/v1/rbac/roles/{$this->zeroSuper->id}/permissions", ['permission_codes' => ['role.assign', 'user.view']], [], false, fn () => DB::table('role_permissions')->where('role_id', (string) $this->zeroSuper->id)->count()],
+            ['E4 create permission', 'POST', 'api/v1/rbac/permissions', ['code' => 'o17h.probe.' . $name, 'name' => 'o17h.probe.' . $name, 'module' => 'o17h', 'action' => 'probe'], [], false, fn () => DB::table('permissions')->count()],
+            ['E5 web admin: set another user role to super_admin', 'POST', "app/admin/users/{$vid}/role", ['role' => 'super_admin'], [], true, fn () => DB::table('user_roles')->where('user_id', $vid)->count()],
+            ['WF1 approve change request', 'POST', "api/zena/change-requests/{$cr->id}/approve", ['approval_notes' => 'o17h'], [], false, fn () => $this->rowState('change_requests', (string) $cr->id, 'status')],
+            ['DOC1 update own-tenant document (policy role-name path)', 'PUT', "api/documents/{$docA->id}", ['title' => 'o17h-doc'], [], false, fn () => $this->rowState('documents', (string) $docA->id, 'title')],
+            ['DOC2 delete own-tenant document (policy role-name path)', 'DELETE', "api/documents/{$docA2->id}", [], [], false, fn () => $this->rowState('documents', (string) $docA2->id)],
+            ['P1 parameterless rbac: user preferences', 'GET', 'api/user-preferences'],
+            ['P2 parameterless rbac: users list (in-controller user.view)', 'GET', 'api/users'],
+            ['WF2 v1 task assignment (task.assign)', 'POST', 'api/v1/task-assignments', ['task_id' => (string) $task->id, 'user_id' => $vid, 'role' => 'assignee'], [], false, fn () => DB::table('task_assignments')->count()],
+        ];
+
+        foreach ($p as $row) {
+            [$label, $method, $uri] = $row;
+            $payload = $row[3] ?? [];
+            $headers = $row[4] ?? [];
+            $web = $row[5] ?? false;
+            $state = $row[6] ?? null;
+            $audit0 = Schema::hasTable('audit_logs') ? DB::table('audit_logs')->count() : null;
+            $before = $state ? $state() : null;
+            $this->app['auth']->forgetGuards();
+            try {
+                $this->flushHeaders();
+                if ($web) {
+                    $res = $this->actingAs($actor, 'web')->withHeaders($headers)->call($method, '/' . $uri, $payload);
+                } elseif (str_starts_with($uri, 'api/v1/task-assignments')) {
+                    $res = $this->actingAs($actor, 'api')->withHeaders($headers)->json($method, '/' . $uri, $payload);
+                } else {
+                    Sanctum::actingAs($actor, ['*']);
+                    $res = $this->withHeaders($headers)->json($method, '/' . $uri, $payload);
+                }
+                $this->flushHeaders();
+                $status = $res->getStatusCode();
+                $body = Str::limit(preg_replace('/\s+/', ' ', strip_tags((string) $res->getContent())), 220);
+                $loc = $res->headers->get('Location');
+            } catch (\Throwable $e) {
+                $status = 'EXC';
+                $body = get_class($e) . ': ' . Str::limit($e->getMessage(), 200);
+                $loc = null;
+            }
+            $after = $state ? $state() : null;
+            $this->log[] = [
+                'actor' => $name, 'probe' => $label, 'method' => $method, 'uri' => $uri, 'status' => $status,
+                'location' => $loc, 'body' => $body,
+                'before' => $before, 'after' => $after, 'changed' => $state ? ($before !== $after) : null,
+                'audit_delta' => $audit0 === null ? null : DB::table('audit_logs')->count() - $audit0,
+            ];
+            $this->app['auth']->forgetGuards();
+        }
+    }
+
+    /** @param list<Role> $roles */
+    private function user(Tenant $t, array $roles, ?string $legacyRole = null): User
+    {
+        $u = User::factory()->create(['tenant_id' => (string) $t->id, 'is_active' => true]);
+        if ($legacyRole !== null) {
+            $u->forceFill(['role' => $legacyRole])->save();
+        }
+        foreach ($roles as $r) {
+            UserRole::query()->create(['user_id' => (string) $u->id, 'role_id' => (string) $r->id]);
+        }
+
+        return $u->fresh();
+    }
+
+    private function contract(Project $p, string $tenant): Contract
+    {
+        return Contract::factory()->create(['tenant_id' => $tenant, 'project_id' => (string) $p->id, 'created_by' => (string) $p->pm_id, 'title' => 'orig']);
+    }
+
+    private function boq(Project $p, string $tenant): Boq
+    {
+        return Boq::factory()->create(['tenant_id' => $tenant, 'project_id' => (string) $p->id]);
+    }
+
+    /** @return array<string, mixed>|null */
+    private function rowState(string $table, string $id, ?string $col = null): ?array
+    {
+        $r = DB::table($table)->where('id', $id)->first();
+        if ($r === null) {
+            return null;
+        }
+        $out = ['exists' => true];
+        if (property_exists($r, 'deleted_at')) {
+            $out['deleted_at'] = $r->deleted_at !== null;
+        }
+        if ($col !== null) {
+            $out[$col] = $r->{$col};
+        }
+
+        return $out;
+    }
+}

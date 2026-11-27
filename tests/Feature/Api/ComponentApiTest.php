@@ -28,6 +28,7 @@ class ComponentApiTest extends TestCase
     public function test_can_get_components_for_project(): void
     {
         $user = $this->actingAsUser();
+        $this->grantThroughTestRole($user, ['component.read']); // OWN-2026-024 H3: the route code (not an Owner code under D3), bypass removed
 
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id,
@@ -67,6 +68,7 @@ class ComponentApiTest extends TestCase
     public function test_can_create_component_for_project(): void
     {
         $user = $this->actingAsUser();
+        $this->grantThroughTestRole($user, ['component.create']); // OWN-2026-024 H3: the route code (not an Owner code under D3), bypass removed
 
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id,
@@ -102,6 +104,7 @@ class ComponentApiTest extends TestCase
     public function test_can_create_hierarchical_components(): void
     {
         $user = $this->actingAsUser();
+        $this->grantThroughTestRole($user, ['component.create']); // OWN-2026-024 H3: the route code (not an Owner code under D3), bypass removed
 
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id,
@@ -138,6 +141,7 @@ class ComponentApiTest extends TestCase
     public function test_update_component_progress_triggers_event(): void
     {
         $user = $this->actingAsUser();
+        $this->grantThroughTestRole($user, ['component.update']); // OWN-2026-024 H3: the route code (not an Owner code under D3), bypass removed
 
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id,

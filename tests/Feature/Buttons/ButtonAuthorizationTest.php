@@ -184,15 +184,19 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test super_admin access to all functions.
+     * Test super_admin access to tenant functions.
+     *
+     * OWN-2026-024 H3 (Owner Gate 2, Option B): SUPERSEDED in part. The original first assertion — "super_admin has full access",
+     * i.e. `getFollowingRedirects('/admin/dashboard')->assertStatus(200)` — asserted the removed role-name bypass itself
+     * (/admin/dashboard is a host page gated on platform.ops.view). It is replaced by the explicit security guard below; the
+     * tenant-function assertions are unchanged. Original preserved in docs/audits/UAT-RECOVERY-01/104-o17h-h3-review.md.
      */
     public function test_super_admin_has_full_access(): void
     {
         $this->actingAs($this->users['super_admin']);
 
-        // Test admin access
-        $response = $this->getFollowingRedirects('/admin/dashboard');
-        $response->assertStatus(200);
+        // Security guard (replaces the bypass assertion): the tenant Owner role name never opens the host console.
+        $this->getJson('/admin/dashboard')->assertForbidden();
 
         // Test project access
         $response = $this->getFollowingRedirects('/projects');

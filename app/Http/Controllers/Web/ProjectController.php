@@ -91,6 +91,8 @@ class ProjectController extends Controller // Thêm extends Controller
             'tenant' => $user?->tenant,
             'projectData' => $projectData,
             'users' => $users,
+            // UAT-RECOVERY-04d (O-15): only an actor who may change the PM sees the PM selector.
+            'canAssignManager' => \App\Support\ProjectPmAssignment::canChange($user, $projectData),
         ]);
     }
 

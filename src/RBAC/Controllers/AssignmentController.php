@@ -2,6 +2,7 @@
 
 namespace Src\RBAC\Controllers;
 
+use App\Support\Rbac\RbacProtection;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Services\RBACManager;
@@ -255,6 +256,15 @@ class AssignmentController
             ], 400);
         }
 
+        // OWN-2026-024 H2b (Owner Gate 2, D5): privileged roles (Owner role, roles with protected codes, platform roles) need real
+        // canonical Owner authority, same tenant, never self. Generic 403 — no detail that would reveal other tenants' users.
+        if (RbacProtection::privilegedRoleChangeDenial(RbacProtection::currentActor(), (string) $targetUserId, (string) $validated['role_id'], false) !== null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không được phép gán vai trò đặc quyền này.',
+            ], 403);
+        }
+
         $success = $this->rbacManager->assignSystemRole($targetUserId, $validated['role_id'], $tenantId);
 
         if (!$success) {
@@ -280,6 +290,15 @@ class AssignmentController
     public function removeUserRole(Request $request, string $userId, string $roleId): JsonResponse
     {
         $tenantId = TenantContext::id($request);
+
+        // OWN-2026-024 H2b (D5): removing a privileged role (incl. the last active Owner, or one's own) is refused explicitly
+        // instead of the idempotent success shape below.
+        if (RbacProtection::privilegedRoleChangeDenial(RbacProtection::currentActor(), $userId, $roleId, true) !== null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không được phép gỡ vai trò đặc quyền này.',
+            ], 403);
+        }
 
         if ($tenantId !== null && !$this->rbacManager->revokeRole($userId, $roleId, 'system', null, $tenantId)) {
             // revokeRole is fail-closed and idempotent for "not found" / cross-tenant;

@@ -2,6 +2,8 @@
 
 namespace Src\CoreProject\Controllers;
 
+use App\Services\TaskAssignmentShareException;
+use App\Services\TaskAssignmentShares;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,6 +15,7 @@ use Src\CoreProject\Resources\TaskAssignmentResource;
 use Src\CoreProject\Requests\StoreTaskAssignmentRequest;
 use Src\CoreProject\Requests\UpdateTaskAssignmentRequest;
 use Src\RBAC\Middleware\RBACMiddleware;
+use Illuminate\Support\Facades\Auth;
 use Src\Foundation\Utils\JSendResponse;
 
 /**
@@ -29,6 +32,18 @@ class TaskAssignmentController
     {
         // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
         // $this->middleware(RBACMiddleware::class);
+    }
+
+    /**
+     * UAT-RECOVERY-04b (O-13): the CoreProject models have no registered policy, so decide on the canonical
+     * App\Models\Task row (TaskPolicy::assign: owning-project PM holding task.assign). Fail-closed.
+     */
+    private function actorCanAssign(string $taskId): bool
+    {
+        $actor = Auth::guard('api')->user() ?? Auth::user();
+        $canonical = \App\Models\Task::query()->whereKey($taskId)->first();
+
+        return $actor !== null && $canonical !== null && $actor->can('assign', $canonical);
     }
 
     /**
@@ -66,19 +81,46 @@ class TaskAssignmentController
         try {
             $assignmentData = $request->validated();
             $taskId = (string) $assignmentData['task_id'];
-            $this->findTaskOrFail($taskId);
+            $task = $this->findTaskOrFail($taskId);
 
-            // Kiểm tra tổng split_percent không vượt quá 100%
-            $currentTotal = TaskAssignment::where('task_id', $taskId)->sum('split_percent');
-            if ($currentTotal + $assignmentData['split_percent'] > 100) {
-                return JSendResponse::error(
-                    'Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại: ' . $currentTotal . '%',
-                    400
-                );
+            // UAT-RECOVERY-04b (O-13): owning-project PM only; assignee must belong to the task's tenant.
+            if (!$this->actorCanAssign((string) $task->id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
+            if (!\App\Models\User::query()->whereKey($assignmentData['user_id'])->where('tenant_id', $task->tenant_id)->exists()) {
+                return JSendResponse::error('User không thuộc tenant của task.', 422);
             }
 
-            $assignment = TaskAssignment::create($assignmentData);
-            $assignment->load(['task']);
+            // OWN-2026-024 SPLIT-PERCENT: duplicate check, 100 % check and insert under one task-row lock; tenant_id comes from
+            // the task (it was left NULL before), assigned_at/assigned_by from the server; the response is re-read from the DB.
+            $actor = Auth::guard('api')->user() ?? Auth::user();
+
+            try {
+                $assignmentId = TaskAssignmentShares::withTaskLock((string) $task->id, function () use ($assignmentData, $task, $taskId, $actor): string {
+                    if (TaskAssignmentShares::isAssigned($taskId, (string) $assignmentData['user_id'])) {
+                        throw TaskAssignmentShareException::duplicate();
+                    }
+                    TaskAssignmentShares::assertFits($taskId, (float) $assignmentData['split_percent']);
+
+                    return (string) TaskAssignment::create([
+                        'task_id' => $taskId,
+                        'user_id' => (string) $assignmentData['user_id'],
+                        'split_percent' => (float) $assignmentData['split_percent'],
+                        'role' => (string) $assignmentData['role'],
+                        'tenant_id' => (string) $task->tenant_id,
+                        'assigned_at' => now(),
+                        'assigned_by' => $actor !== null ? (string) $actor->getAuthIdentifier() : null,
+                    ])->getKey();
+                });
+            } catch (TaskAssignmentShareException $e) {
+                return JSendResponse::error(match ($e->reason) {
+                    TaskAssignmentShareException::REASON_DUPLICATE => 'User đã được phân công cho task này.',
+                    TaskAssignmentShareException::REASON_EXCEEDS_TOTAL => 'Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại: ' . $e->currentTotal . '%',
+                    default => 'Task không tồn tại.',
+                }, $e->reason === TaskAssignmentShareException::REASON_TASK_NOT_FOUND ? 404 : 400);
+            }
+
+            $assignment = TaskAssignment::query()->with(['task'])->findOrFail($assignmentId);
             $this->normalizeAssignmentForResource($assignment);
 
             // Dispatch event
@@ -90,6 +132,8 @@ class TaskAssignmentController
                 'assignment' => new TaskAssignmentResource($assignment),
                 'message' => 'Task assignment đã được tạo thành công.'
             ], 201);
+        } catch (ModelNotFoundException $e) {
+            return JSendResponse::error('Task không tồn tại.', 404);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo task assignment: ' . $e->getMessage(), 500);
         }
@@ -122,25 +166,32 @@ class TaskAssignmentController
         try {
             $assignment = $this->findAssignmentOrFail($taskAssignment);
 
+            // UAT-RECOVERY-04b (O-13): reassignment uses the same boundary.
+            if (!$this->actorCanAssign((string) $assignment->task_id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
+
             $assignmentData = $request->validated();
             $taskId = (string) $assignment->task_id;
 
-            // Kiểm tra tổng split_percent không vượt quá 100%
-            if (isset($assignmentData['split_percent'])) {
-                $currentTotal = TaskAssignment::where('task_id', $taskId)
-                    ->where('id', '!=', $assignment->id)
-                    ->sum('split_percent');
-                    
-                if ($currentTotal + $assignmentData['split_percent'] > 100) {
-                    return JSendResponse::error(
-                        'Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại (không bao gồm assignment này): ' . $currentTotal . '%',
-                        400
-                    );
-                }
+            // OWN-2026-024 SPLIT-PERCENT: the 100 % check (excluding this assignment) and the update run under the task lock.
+            try {
+                TaskAssignmentShares::withTaskLock($taskId, function () use ($assignment, $assignmentData, $taskId): void {
+                    if (isset($assignmentData['split_percent'])) {
+                        TaskAssignmentShares::assertFits($taskId, (float) $assignmentData['split_percent'], (string) $assignment->getKey());
+                    }
+                    $assignment->update($assignmentData);
+                });
+            } catch (TaskAssignmentShareException $e) {
+                return JSendResponse::error(
+                    $e->reason === TaskAssignmentShareException::REASON_EXCEEDS_TOTAL
+                        ? 'Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại (không bao gồm assignment này): ' . $e->currentTotal . '%'
+                        : 'Task không tồn tại.',
+                    $e->reason === TaskAssignmentShareException::REASON_TASK_NOT_FOUND ? 404 : 400
+                );
             }
 
-            $assignment->update($assignmentData);
-            $assignment->load(['task']);
+            $assignment = TaskAssignment::query()->with(['task'])->findOrFail($assignment->getKey());
             $this->normalizeAssignmentForResource($assignment);
 
             // Dispatch event
@@ -166,6 +217,11 @@ class TaskAssignmentController
     {
         try {
             $assignment = $this->findAssignmentOrFail($taskAssignment);
+
+            // UAT-RECOVERY-04b (O-13): unassignment uses the same boundary.
+            if (!$this->actorCanAssign((string) $assignment->task_id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
 
             $assignment->delete();
 

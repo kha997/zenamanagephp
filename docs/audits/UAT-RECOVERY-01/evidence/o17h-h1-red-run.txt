@@ -1,0 +1,107 @@
+# OWN-2026-024 H1 run — tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php at head c94ff67c0 (uncommitted test file), SQLite, 2026-11-24.
+# Expected: 10 RED (group uat-recovery-07-o17h-red), 6 GREEN guards. Local paths stripped.
+PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.32
+Configuration: phpunit.xml
+
+FFFF.FFFF.....FF                                                  16 / 16 (100%)
+
+Time: 00:17.544, Memory: 111.50 MB
+
+Uat Recovery07O17h Explicit Rbac (Tests\Feature\Recovery\UatRecovery07O17hExplicitRbac)
+ ✘ Zero grant owner is denied by every permission gate
+   │
+   │ 888 permission-gated routes admit a zero-grant super_admin, e.g. GET|HEAD api/auth/me [auth.me]; POST api/auth/logout [auth.logout]; POST api/auth/refresh [auth.refresh]; POST api/auth/check-permission [auth.check-permission]; GET|HEAD api/auth/permissions [auth.permissions]
+   │ Failed asserting that 888 is identical to 0.
+   │
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:82
+   │
+ ✘ Every rbac argument is a real permission code
+   │
+   │ rbac arguments that are not permission codes (only super_admin can pass them): {"admin":80}
+   │ Failed asserting that 1 is identical to 0.
+   │
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:99
+   │
+ ✘ Tenant owner cannot reach host level routes by role name
+   │
+   │ 80 host-level routes reachable by the tenant Owner role name, e.g. GET|HEAD api/admin/dashboard/stats; GET|HEAD api/admin/dashboard/activities; GET|HEAD api/admin/dashboard/alerts; GET|HEAD api/admin/dashboard/metrics; GET|HEAD api/cache/stats
+   │ Failed asserting that 80 is identical to 0.
+   │
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:123
+   │
+ ✘ Revoking a canonical grant from the owner removes access
+   │
+   │ Expected response status code [403] but received 200.
+   │ Failed asserting that 200 is identical to 403.
+   │
+   │ vendor/laravel/framework/src/Illuminate/Testing/TestResponseAssert.php:45
+   │ vendor/laravel/framework/src/Illuminate/Testing/TestResponse.php:175
+   │ vendor/laravel/framework/src/Illuminate/Testing/Concerns/AssertsStatusCodes.php:141
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:138
+   │
+ ✔ Revoking a canonical grant from an ordinary role removes access
+ ✘ Zero grant owner cannot manage roles or permissions
+   │
+   │ Failed asserting that two arrays are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │  Array &0 [
+   │ -    'assign Owner role' => 403,
+   │ -    'create role' => 403,
+   │ -    'create permission' => 403,
+   │ +    'assign Owner role' => 200,
+   │ +    'create role' => 201,
+   │ +    'create permission' => 201,
+   │  ]
+   │
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:172
+   │
+ ✘ Zero grant owner cannot approve a change request
+   │
+   │ Expected response status code [403] but received 200.
+   │ Failed asserting that 200 is identical to 403.
+   │
+   │ vendor/laravel/framework/src/Illuminate/Testing/TestResponseAssert.php:45
+   │ vendor/laravel/framework/src/Illuminate/Testing/TestResponse.php:175
+   │ vendor/laravel/framework/src/Illuminate/Testing/Concerns/AssertsStatusCodes.php:141
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:188
+   │
+ ✘ Document policy does not bypass canonical grants
+   │
+   │ DocumentPolicy abilities granted by role name alone: owner role:viewAny, owner role:create, owner role:view, owner role:update, owner role:delete, owner role:restore, owner role:forceDelete, owner role:download, legacy users.role:viewAny, legacy users.role:create, legacy users.role:view, legacy users.role:update, legacy users.role:delete, legacy users.role:restore, legacy users.role:forceDelete, legacy users.role:download
+   │ Failed asserting that 16 is identical to 0.
+   │
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:214
+   │
+ ✘ Sidebar config policy does not bypass canonical grants
+   │
+   │ SidebarConfigPolicy abilities granted by role name alone: viewAny, create, manage, clone, reset
+   │ Failed asserting that 5 is identical to 0.
+   │
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:226
+   │
+ ✔ Document policy canonical grant still works and stays tenant bound
+ ✔ Owner cannot reach another tenants objects
+ ✔ Granted owner permissions work without the role name
+ ✔ Provisioned owner keeps granted workflows
+ ✔ Production role grant counts are pinned
+ ✘ Tenant role admin cannot self grant host or owner authority
+   │
+   │ tenant role administrator: self-granted host-level code(s) system.admin,system.settings (HTTP 200); assigned itself the global Owner role (HTTP 200)
+   │ Failed asserting that 2 is identical to 0.
+   │
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:345
+   │
+ ✘ Reseeding does not restore a deliberately revoked grant
+   │
+   │ production:rbac silently restored the revoked role.assign grant
+   │ Failed asserting that true is false.
+   │
+   │ tests/Feature/Recovery/UatRecovery07O17hExplicitRbacTest.php:359
+   │
+
+FAILURES!
+Tests: 16, Assertions: 40, Failures: 10.

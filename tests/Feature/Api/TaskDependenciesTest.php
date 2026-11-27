@@ -28,7 +28,8 @@ class TaskDependenciesTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin();
+        // OWN-2026-024 H3 fixture: the super_admin role-name bypass is gone; grant exactly the codes these routes are gated on.
+        $this->apiActingAsTenantAdmin([], null, ['task.dependencies.view', 'task.dependencies.add', 'task.dependencies.remove', 'task.update-status']);
         $this->user = $this->apiFeatureUser;
         $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
@@ -42,12 +43,14 @@ class TaskDependenciesTest extends TestCase
     public function test_can_add_task_dependency()
     {
         $task1 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
         ]);
 
         $task2 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
@@ -81,12 +84,14 @@ class TaskDependenciesTest extends TestCase
     public function test_can_remove_task_dependency()
     {
         $task1 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
         ]);
 
         $task2 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
@@ -122,12 +127,14 @@ class TaskDependenciesTest extends TestCase
     public function test_prevents_circular_dependency()
     {
         $task1 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
         ]);
 
         $task2 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
@@ -151,6 +158,7 @@ class TaskDependenciesTest extends TestCase
     public function test_prevents_self_dependency()
     {
         $task = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
@@ -171,18 +179,21 @@ class TaskDependenciesTest extends TestCase
     public function test_prevents_complex_circular_dependency()
     {
         $task1 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
         ]);
 
         $task2 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
         ]);
 
         $task3 = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
@@ -209,6 +220,7 @@ class TaskDependenciesTest extends TestCase
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'assignee_id' => $this->user->id, // S4/O-14: acting user is the task's assignee (legitimate ownership relation)
             'status' => 'todo',
             'tenant_id' => $this->project->tenant_id,
         ]);
@@ -216,6 +228,7 @@ class TaskDependenciesTest extends TestCase
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'assignee_id' => $this->user->id, // S4/O-14: acting user is the task's assignee (legitimate ownership relation)
             'status' => 'todo',
             'tenant_id' => $this->project->tenant_id,
         ]);

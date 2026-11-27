@@ -21,6 +21,18 @@ class DocumentPolicySimpleTest extends TestCase
 
     protected $document;
 
+    /** OWN-2026-024 H4: a canonical grant through a test-owned role (user_roles -> role_permissions). */
+    private function grantCodes(User $user, array $codes): void
+    {
+        $role = \App\Models\Role::firstOrCreate(['name' => 'o17h-h4-document-fixture'], ['scope' => 'custom', 'is_active' => true]);
+        foreach ($codes as $code) {
+            [$module, $action] = explode('.', $code, 2);
+            $permission = \App\Models\Permission::firstOrCreate(['code' => $code], ['name' => $code, 'module' => $module, 'action' => $action, 'description' => $code]);
+            $role->permissions()->syncWithoutDetaching($permission->id);
+        }
+        $user->roles()->syncWithoutDetaching($role->id);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -51,9 +63,13 @@ class DocumentPolicySimpleTest extends TestCase
         ]);
     }
 
+    /** OWN-2026-024 (O-17h) H4 — SUPERSEDED (Owner Gate 2 Option B / H4 requirement 8: no fallback to legacy users.role). Original preserved in docs/audits/UAT-RECOVERY-01/105-o17h-h4-review.md §4. Original: users.role = 'admin' then assertTrue(view). Now: the column grants nothing; a canonical grant does. */
     public function test_user_can_view_document_in_same_tenant()
     {
         $this->user->role = 'admin';
+        $this->assertFalse($this->policy->view($this->user, $this->document), 'users.role alone');
+        $this->grantCodes($this->user, ['document.view']);
+        $this->user = $this->user->fresh();
 
         $this->assertTrue($this->policy->view($this->user, $this->document));
     }
@@ -79,9 +95,13 @@ class DocumentPolicySimpleTest extends TestCase
         $this->assertFalse($this->policy->view($this->user, $otherDocument));
     }
 
+    /** OWN-2026-024 (O-17h) H4 — SUPERSEDED (Owner Gate 2 Option B / H4 requirement 8: no fallback to legacy users.role). Original preserved in docs/audits/UAT-RECOVERY-01/105-o17h-h4-review.md §4. Original: users.role = 'admin' then assertTrue(create). */
     public function test_user_can_create_document_with_proper_role()
     {
         $this->user->role = 'admin';
+        $this->assertFalse($this->policy->create($this->user), 'users.role alone');
+        $this->grantCodes($this->user, ['document.create']);
+        $this->user = $this->user->fresh();
 
         $this->assertTrue($this->policy->create($this->user));
     }

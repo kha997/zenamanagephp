@@ -51,6 +51,7 @@ class BlockerTest extends TestCase
             'name' => 'Dựng mô hình 3D',
             'title' => 'Dựng mô hình 3D',
             'status' => 'pending',
+            'assignee_id' => (string) $this->user->id, // S4/O-14: acting user is the task's assignee (legitimate ownership relation)
         ]);
 
         $this->item = DesignItem::query()->create([

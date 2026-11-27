@@ -170,8 +170,10 @@ class RbacApiTest extends TestCase
      */
     public function test_can_create_role()
     {
+        // OWN-2026-024 H2b (D5): seeder-alias / privileged role names ("Project Manager", "Admin", ...) are reserved for the
+        // global roles, so the fixture uses a neutral tenant role name. Assertions unchanged.
         $roleData = [
-            'name' => 'Project Manager',
+            'name' => 'Site Coordinator',
             'scope' => 'custom',
             'description' => 'Manages projects and teams',
             'permissions' => Permission::limit(3)->pluck('id')->toArray(),
@@ -197,7 +199,7 @@ class RbacApiTest extends TestCase
                  ]);
 
         $this->assertDatabaseHas('roles', [
-            'name' => 'Project Manager',
+            'name' => 'Site Coordinator',
             'scope' => 'custom',
         ]);
     }

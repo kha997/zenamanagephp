@@ -15,6 +15,7 @@ use Tests\TestCase;
 class AccessibilityTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Traits\TenantUserFactoryTrait;
 
     protected $user;
 
@@ -208,6 +209,10 @@ class AccessibilityTest extends TestCase
 
         $adminRole->permissions()->syncWithoutDetaching($adminPermission->id);
         $admin->roles()->syncWithoutDetaching($adminRole->id);
+        // OWN-2026-024 H3: /admin/dashboard is a host page gated on platform.ops.view (H2a); neither the role name super_admin
+        // nor the non-permission 'admin' code passes it any more. The viewer is a test Platform Operator; the accessibility
+        // assertions below are unchanged.
+        $this->provisionTestPlatformOperator($admin, ['platform.ops.view']);
 
         $response = $this->actingAs($admin)
             ->withSession(['tenant_id' => (string) $admin->tenant_id])

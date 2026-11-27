@@ -1,0 +1,58 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Scratch\O17h;
+
+use App\Models\Permission;
+use App\Models\Role;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Route;
+use Tests\TestCase;
+
+/**
+ * Throwaway read-only probe (O-17h assessment, never committed). Seeds a synthetic DB the way production does
+ * (production:rbac) and classifies every rbac:<arg> route by what the middleware would decide for super_admin vs others.
+ */
+class O17hClassifyProbeTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_classify(): void
+    {
+        Artisan::call('production:rbac');
+
+        $out = ['catalogue' => [], 'roles' => [], 'routes' => []];
+        foreach (Role::query()->with('permissions')->get() as $role) {
+            $out['roles'][$role->name] = $role->permissions->pluck('code')->filter()->values()->all();
+        }
+        $out['catalogue'] = Permission::query()->get(['code', 'name'])->map(fn ($p) => [$p->code, $p->name])->all();
+
+        foreach (Route::getRoutes() as $route) {
+            $mw = $route->gatherMiddleware();
+            $rbac = [];
+            foreach ($mw as $m) {
+                if (!is_string($m)) {
+                    continue;
+                }
+                if ($m === 'rbac' || str_starts_with($m, 'rbac:') || str_contains($m, 'RoleBasedAccessControlMiddleware')) {
+                    $rbac[] = str_contains($m, ':') ? explode(':', $m, 2)[1] : '';
+                }
+            }
+            if ($rbac === []) {
+                continue;
+            }
+            $out['routes'][] = [
+                'methods' => array_values(array_diff($route->methods(), ['HEAD'])),
+                'uri' => $route->uri(),
+                'name' => $route->getName(),
+                'action' => $route->getActionName(),
+                'rbac' => $rbac,
+                'mw' => array_values(array_filter($mw, 'is_string')),
+            ];
+        }
+        file_put_contents(getenv('O17H_OUT') ?: '/dev/null', json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->assertNotEmpty($out['routes']);
+    }
+}

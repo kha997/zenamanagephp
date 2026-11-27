@@ -1,0 +1,143 @@
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+PHPUnit 11.5.56 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.32
+Configuration: <repo>/phpunit.xml
+
+F.FFF.FFF..FFF.F.                                                 17 / 17 (100%)
+
+Time: 00:38.014, Memory: 91.00 MB
+
+Uat Recovery04b Task Surface (Tests\Feature\Recovery\UatRecovery04bTaskSurface)
+ ✘ O10 task delete holder cannot update assign status or manage dependencies without a relation
+   │
+   │ task.delete (and every other System Admin permission) grants no object-level authority
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'[{"id":"HswwA7OUv1X0fAYn6KOdu9YDHd","tenant_id":"01M7XKSXZQA7NTTJDPX5QKY1RN","project_id":"01M7XKSY12C0GYN13N9QPB7KRP","name":"Ipsa minima commodi.","description":"Consequatur reiciendis occaecati est aut placeat. Eius voluptas autem est impedit voluptatibus rerum molestiae. Quod delectus molestiae mollitia perspiciatis provident rerum. Sed et sit tenetur qui.","status":"pending","priority":"medium","assignee_id":null,"start_date":"2026-11-15 20:26:11","end_date":"2027-01-13 17:29:24","progress_percent":0,"estimated_hours":4.36,"actual_hours":25.73,"tags":"[\"quasi\",\"maxime\"]","dependencies_json":null,"created_at":"2026-11-20 23:13:59","updated_at":"2026-11-20 23:13:59","deleted_at":null,"is_hidden":0,"visibility":"private","client_approved":0,"component_id":null,"phase_id":null,"title":"Ipsa minima commodi.","assigned_to":"01M7XKSY08BMNW7RPPBG3EH7FB","spent_hours":null,"parent_id":null,"order":19,"conditional_tag":null,"created_by":"01M7XKSY21M41QH2ARS1RJYAG7","updated_by":null,"watchers":"[]","estimated_cost":0,"actual_cost":0,"risk_level":"low","complexity":"moderate","effort_points":1,"last_activity_at":null,"time_spent":0,"is_billable":1,"completed_at":null,"work_instance_id":null,"work_instance_step_id":null,"blocked_at":null,"blocker_note":null,"blocked_by":null},[{"id":"01M7XKSY2E3R57KVG1XR0WQH1H","task_id":"HswwA7OUv1X0fAYn6KOdu9YDHd","user_id":"01M7XKSY0PEG9MWJ9V1HJZEA0Z","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:13:59","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:13:59","updated_at":"2026-11-20 23:13:59","team_id":null,"assignment_type":"user","tenant_id":"01M7XKSXZQA7NTTJDPX5QKY1RN","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null}],[]]'
+   │ +'[{"id":"HswwA7OUv1X0fAYn6KOdu9YDHd","tenant_id":"01M7XKSXZQA7NTTJDPX5QKY1RN","project_id":"01M7XKSY12C0GYN13N9QPB7KRP","name":"Ipsa minima commodi.","description":"Consequatur reiciendis occaecati est aut placeat. Eius voluptas autem est impedit voluptatibus rerum molestiae. Quod delectus molestiae mollitia perspiciatis provident rerum. Sed et sit tenetur qui.","status":"done","priority":"medium","assignee_id":null,"start_date":"2026-11-15 20:26:11","end_date":"2027-01-13 17:29:24","progress_percent":100,"estimated_hours":4.36,"actual_hours":25.73,"tags":"[\"quasi\",\"maxime\"]","dependencies_json":null,"created_at":"2026-11-20 23:13:59","updated_at":"2026-11-20 23:13:59","deleted_at":null,"is_hidden":0,"visibility":"private","client_approved":0,"component_id":null,"phase_id":null,"title":"Ipsa minima commodi.","assigned_to":"01M7XKSY08BMNW7RPPBG3EH7FB","spent_hours":null,"parent_id":null,"order":19,"conditional_tag":null,"created_by":"01M7XKSY21M41QH2ARS1RJYAG7","updated_by":null,"watchers":"[]","estimated_cost":0,"actual_cost":0,"risk_level":"low","complexity":"moderate","effort_points":1,"last_activity_at":null,"time_spent":0,"is_billable":1,"completed_at":"2026-11-20 23:13:59","work_instance_id":null,"work_instance_step_id":null,"blocked_at":"2026-11-20 23:13:59","blocker_note":"x","blocked_by":"01M7XKSY0V31K1D9RW7XAPGMBE"},[{"id":"01M7XKSY2E3R57KVG1XR0WQH1H","task_id":"HswwA7OUv1X0fAYn6KOdu9YDHd","user_id":"01M7XKSY0PEG9MWJ9V1HJZEA0Z","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:13:59","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:13:59","updated_at":"2026-11-20 23:13:59","team_id":null,"assignment_type":"user","tenant_id":"01M7XKSXZQA7NTTJDPX5QKY1RN","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null}],[{"id":1,"task_id":"HswwA7OUv1X0fAYn6KOdu9YDHd","dependency_id":"IfG4kJNHAnSW25HuYD4UDQK98s","created_at":"2026-11-20 23:13:59","updated_at":"2026-11-20 23:13:59","tenant_id":"01M7XKSXZQA7NTTJDPX5QKY1RN"}]]'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:152
+   │
+ ✔ O10 independent delete authority is preserved
+ ✘ System admin acts only where explicitly related and never across tenants
+   │
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'[{"id":"7OMi48IK3qSHrSiRnVOnK101Bh","tenant_id":"01M7XKT1ETCM3CM5RAR36KQF39","project_id":"01M7XKT1G152HFETPJTSCTMSK9","name":"Amet incidunt quos omnis numquam dolores.","description":"Quo similique magni saepe debitis provident molestiae. Sunt enim qui fugiat possimus tenetur rerum quibusdam. Culpa quidem pariatur exercitationem voluptatem eum sed doloremque veniam.","status":"pending","priority":"high","assignee_id":null,"start_date":"2026-11-27 03:55:55","end_date":"2027-03-09 06:41:52","progress_percent":0,"estimated_hours":26.93,"actual_hours":53.39,"tags":"[\"ullam\",\"vel\"]","dependencies_json":null,"created_at":"2026-11-20 23:14:02","updated_at":"2026-11-20 23:14:02","deleted_at":null,"is_hidden":0,"visibility":"team","client_approved":0,"component_id":null,"phase_id":null,"title":"Amet incidunt quos omnis numquam dolores.","assigned_to":"01M7XKT1FC7R2PFBWN7M85HFTV","spent_hours":null,"parent_id":null,"order":19,"conditional_tag":null,"created_by":"01M7XKT1HRXRVV9E8JJ946Y626","updated_by":null,"watchers":"[]","estimated_cost":0,"actual_cost":0,"risk_level":"low","complexity":"moderate","effort_points":1,"last_activity_at":null,"time_spent":0,"is_billable":1,"completed_at":null,"work_instance_id":null,"work_instance_step_id":null,"blocked_at":null,"blocker_note":null,"blocked_by":null},[{"id":"01M7XKT1J58J540MAJDC51ZMH9","task_id":"7OMi48IK3qSHrSiRnVOnK101Bh","user_id":"01M7XKT1FQ22ZAJTC5VBSAGPYD","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:02","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:02","updated_at":"2026-11-20 23:14:02","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT1ETCM3CM5RAR36KQF39","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null}],[]]'
+   │ +'[{"id":"7OMi48IK3qSHrSiRnVOnK101Bh","tenant_id":"01M7XKT1ETCM3CM5RAR36KQF39","project_id":"01M7XKT1G152HFETPJTSCTMSK9","name":"Amet incidunt quos omnis numquam dolores.","description":"Quo similique magni saepe debitis provident molestiae. Sunt enim qui fugiat possimus tenetur rerum quibusdam. Culpa quidem pariatur exercitationem voluptatem eum sed doloremque veniam.","status":"in_progress","priority":"high","assignee_id":null,"start_date":"2026-11-27 03:55:55","end_date":"2027-03-09 06:41:52","progress_percent":0,"estimated_hours":26.93,"actual_hours":53.39,"tags":"[\"ullam\",\"vel\"]","dependencies_json":null,"created_at":"2026-11-20 23:14:02","updated_at":"2026-11-20 23:14:03","deleted_at":null,"is_hidden":0,"visibility":"team","client_approved":0,"component_id":null,"phase_id":null,"title":"Amet incidunt quos omnis numquam dolores.","assigned_to":"01M7XKT1FC7R2PFBWN7M85HFTV","spent_hours":null,"parent_id":null,"order":19,"conditional_tag":null,"created_by":"01M7XKT1HRXRVV9E8JJ946Y626","updated_by":null,"watchers":"[]","estimated_cost":0,"actual_cost":0,"risk_level":"low","complexity":"moderate","effort_points":1,"last_activity_at":null,"time_spent":0,"is_billable":1,"completed_at":null,"work_instance_id":null,"work_instance_step_id":null,"blocked_at":null,"blocker_note":null,"blocked_by":null},[{"id":"01M7XKT1J58J540MAJDC51ZMH9","task_id":"7OMi48IK3qSHrSiRnVOnK101Bh","user_id":"01M7XKT1FQ22ZAJTC5VBSAGPYD","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:02","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:02","updated_at":"2026-11-20 23:14:02","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT1ETCM3CM5RAR36KQF39","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null}],[]]'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:181
+   │
+ ✘ Unauthorised actors cannot assign reassign or unassign on any surface
+   │
+   │ Member B (legacy team_member) / dashboard store: no persisted change
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'[{"id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","project_id":"01M7XKT318NQR82BNX350CCZRF","name":"Excepturi aut modi veritatis enim iusto.","description":"Natus culpa voluptatem corporis est cupiditate error totam. Neque error omnis culpa iure quos similique dolor harum. Temporibus soluta dolorem aliquam quidem.","status":"pending","priority":"high","assignee_id":null,"start_date":"2026-11-15 11:40:25","end_date":"2027-03-24 07:43:49","progress_percent":0,"estimated_hours":1.03,"actual_hours":45.3,"tags":"[\"consequatur\",\"similique\"]","dependencies_json":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","deleted_at":null,"is_hidden":0,"visibility":"team","client_approved":0,"component_id":null,"phase_id":null,"title":"Excepturi aut modi veritatis enim iusto.","assigned_to":"01M7XKT32YD5ZV7BDJ1SHEPSPS","spent_hours":null,"parent_id":null,"order":13,"conditional_tag":null,"created_by":"01M7XKT325HH4S41FPTSKS2X3F","updated_by":null,"watchers":"[]","estimated_cost":0,"actual_cost":0,"risk_level":"low","complexity":"moderate","effort_points":1,"last_activity_at":null,"time_spent":0,"is_billable":1,"completed_at":null,"work_instance_id":null,"work_instance_step_id":null,"blocked_at":null,"blocker_note":null,"blocked_by":null},[{"id":"01M7XKT32KZ2WNG2YNRHB070AA","task_id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","user_id":"01M7XKT30YBN6KHY6N9N07XWQ4","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:04","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null},{"id":"01M7XKT32QJM20JV4AKJPA1MV2","task_id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","user_id":"01M7XKT30MES4EN9GG12CB4DBN","role":"assignee","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:04","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null},{"id":"01M7XKT33XPSJN75NY4QP2EMWX","task_id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","user_id":"01M7XKT3341E6FJP10DNZYQ7EH","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:04","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null}],[]]'
+   │ +'[{"id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","project_id":"01M7XKT318NQR82BNX350CCZRF","name":"Excepturi aut modi veritatis enim iusto.","description":"Natus culpa voluptatem corporis est cupiditate error totam. Neque error omnis culpa iure quos similique dolor harum. Temporibus soluta dolorem aliquam quidem.","status":"pending","priority":"high","assignee_id":null,"start_date":"2026-11-15 11:40:25","end_date":"2027-03-24 07:43:49","progress_percent":0,"estimated_hours":1.03,"actual_hours":45.3,"tags":"[\"consequatur\",\"similique\"]","dependencies_json":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","deleted_at":null,"is_hidden":0,"visibility":"team","client_approved":0,"component_id":null,"phase_id":null,"title":"Excepturi aut modi veritatis enim iusto.","assigned_to":"01M7XKT32YD5ZV7BDJ1SHEPSPS","spent_hours":null,"parent_id":null,"order":13,"conditional_tag":null,"created_by":"01M7XKT325HH4S41FPTSKS2X3F","updated_by":null,"watchers":"[]","estimated_cost":0,"actual_cost":0,"risk_level":"low","complexity":"moderate","effort_points":1,"last_activity_at":null,"time_spent":0,"is_billable":1,"completed_at":null,"work_instance_id":null,"work_instance_step_id":null,"blocked_at":null,"blocker_note":null,"blocked_by":null},[{"id":"01M7XKT32KZ2WNG2YNRHB070AA","task_id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","user_id":"01M7XKT30YBN6KHY6N9N07XWQ4","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:04","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null},{"id":"01M7XKT32QJM20JV4AKJPA1MV2","task_id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","user_id":"01M7XKT30MES4EN9GG12CB4DBN","role":"assignee","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:04","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null},{"id":"01M7XKT33XPSJN75NY4QP2EMWX","task_id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","user_id":"01M7XKT3341E6FJP10DNZYQ7EH","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:04","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null},{"id":"01m7xkt34jet3cnd4apmzrbn5d","task_id":"onKPG0WrSzFnzM4hNZDeRpfjZ2","user_id":"01M7XKT30S3CRVVJC5PFFV3RPR","role":"assignee","assigned_hours":0,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:04","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:04","updated_at":"2026-11-20 23:14:04","team_id":null,"assignment_type":"user","tenant_id":"01M7XKT301VJY3TMD8A5PVMS64","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null}],[]]'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:228
+   │
+ ✘ Owning project pm is authorised on the assignment surfaces
+   │
+   │ assignment must not cross tenants
+   │ Failed asserting that 1 is identical to 0.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:253
+   │
+ ✔ Assignment does not grant rbac permissions or ownership of other tasks
+ ✘ Coreproject assignment accepts ulid identifiers
+   │
+   │ ULID task_id/user_id must pass validation (was `integer`)
+   │ Failed asserting that 422 is not identical to 422.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:283
+   │
+ ✘ Bulk status endpoint enforces the same boundary per task
+   │
+   │ authorised task is updated
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'completed'
+   │ +'pending'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:304
+   │
+ ✘ Defining the task edit alias cannot bypass ownership on coreproject routes
+   │
+   │ alias activation alone must not open any task mutation
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'[{"id":"h4gOF5yp9Njs0gVzKvghMBpbxU","tenant_id":"01M7XKTAZJKDQ31819NW25WZN5","project_id":"01M7XKTB11NVMHMNGWQRE0B7DM","name":"Unde autem animi et.","description":"Quod error nihil non modi ad dolor perspiciatis. Nostrum a laudantium odio placeat. Et veritatis qui eum veniam. Facere quia totam tenetur sapiente sunt nemo sed cum.","status":"pending","priority":"low","assignee_id":null,"start_date":"2026-10-21 01:52:54","end_date":"2027-05-13 04:34:25","progress_percent":0,"estimated_hours":31.16,"actual_hours":44.57,"tags":"[\"autem\",\"cum\"]","dependencies_json":null,"created_at":"2026-11-20 23:14:12","updated_at":"2026-11-20 23:14:12","deleted_at":null,"is_hidden":0,"visibility":"team","client_approved":0,"component_id":null,"phase_id":null,"title":"Unde autem animi et.","assigned_to":"01M7XKTB077T5GFG2QAWBNJ59E","spent_hours":null,"parent_id":null,"order":23,"conditional_tag":null,"created_by":"01M7XKTB1YD1KFBNR7TKXKSEM4","updated_by":null,"watchers":"[]","estimated_cost":0,"actual_cost":0,"risk_level":"low","complexity":"moderate","effort_points":1,"last_activity_at":null,"time_spent":0,"is_billable":1,"completed_at":null,"work_instance_id":null,"work_instance_step_id":null,"blocked_at":null,"blocker_note":null,"blocked_by":null},[{"id":"01M7XKTB2E03KCD59M0KZ8JF8A","task_id":"h4gOF5yp9Njs0gVzKvghMBpbxU","user_id":"01M7XKTB0KY2P8JSDBWZBBEN64","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:12","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:12","updated_at":"2026-11-20 23:14:12","team_id":null,"assignment_type":"user","tenant_id":"01M7XKTAZJKDQ31819NW25WZN5","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null}],[]]'
+   │ +'[{"id":"h4gOF5yp9Njs0gVzKvghMBpbxU","tenant_id":"01M7XKTAZJKDQ31819NW25WZN5","project_id":"01M7XKTB11NVMHMNGWQRE0B7DM","name":"HIJACK","description":"Quod error nihil non modi ad dolor perspiciatis. Nostrum a laudantium odio placeat. Et veritatis qui eum veniam. Facere quia totam tenetur sapiente sunt nemo sed cum.","status":"pending","priority":"low","assignee_id":null,"start_date":"2026-10-21 01:52:54","end_date":"2027-05-13 04:34:25","progress_percent":0,"estimated_hours":31.16,"actual_hours":44.57,"tags":"[\"autem\",\"cum\"]","dependencies_json":null,"created_at":"2026-11-20 23:14:12","updated_at":"2026-11-20 23:14:12","deleted_at":null,"is_hidden":0,"visibility":"team","client_approved":0,"component_id":null,"phase_id":null,"title":"Unde autem animi et.","assigned_to":"01M7XKTB077T5GFG2QAWBNJ59E","spent_hours":null,"parent_id":null,"order":23,"conditional_tag":null,"created_by":"01M7XKTB1YD1KFBNR7TKXKSEM4","updated_by":null,"watchers":"[]","estimated_cost":0,"actual_cost":0,"risk_level":"low","complexity":"moderate","effort_points":1,"last_activity_at":null,"time_spent":0,"is_billable":1,"completed_at":null,"work_instance_id":null,"work_instance_step_id":null,"blocked_at":null,"blocker_note":null,"blocked_by":null},[{"id":"01M7XKTB2E03KCD59M0KZ8JF8A","task_id":"h4gOF5yp9Njs0gVzKvghMBpbxU","user_id":"01M7XKTB0KY2P8JSDBWZBBEN64","role":"observer","assigned_hours":null,"actual_hours":0,"status":"pending","assigned_at":"2026-11-20 23:14:12","started_at":null,"completed_at":null,"notes":null,"created_at":"2026-11-20 23:14:12","updated_at":"2026-11-20 23:14:12","team_id":null,"assignment_type":"user","tenant_id":"01M7XKTAZJKDQ31819NW25WZN5","priority":null,"estimated_hours":null,"assigned_by":null,"due_date":null,"created_by":null,"updated_by":null}],[]]'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:332
+   │
+ ✔ Alias activation still lets the legitimate actors through authorization
+ ✔ S4 surfaces remain protected and legitimate workflows work
+ ✘ Project creation persists an authorised pm id through api and web
+   │
+   │ API create persists pm_id
+   │ Failed asserting that null is identical to '01M7XKTGH3S8GVW2NK8F8R48FS'.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:379
+   │
+ ✘ Creator pm can then manage tasks of the project and another pm cannot
+   │
+   │ project PM manages
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'in_progress'
+   │ +'pending'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:397
+   │
+ ✘ Cross tenant pm id is rejected on create and update
+   │
+   │ Failed asserting that 201 is identical to 422.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:410
+   │
+ ✔ Update without pm id does not erase it and the current pm may transfer
+ ✘ Pm authority cannot be taken by editing pm id
+   │
+   │ takeover via update denied
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'01M7XKTQ1XRNBG82YJ59HY0BDH'
+   │ +'01M7XKTQ2552SA3TDKCG7N5TMV'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04bTaskSurfaceTest.php:436
+   │
+ ✔ Unmanaged project pm can be set by a project update holder and customer priority are untouched
+
+FAILURES!
+Tests: 17, Assertions: 37, Failures: 11.

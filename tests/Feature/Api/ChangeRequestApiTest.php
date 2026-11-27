@@ -52,6 +52,24 @@ class ChangeRequestApiTest extends TestCase
         ]);
         $this->user->roles()->syncWithoutDetaching($superAdminRole->id);
 
+        // O-17 / CB-4 fixture (UAT-RECOVERY 06): the zero-permission `super_admin` role no longer applies change requests
+        // (apply creates a task); grant the canonical change-request.apply and task.create through a test-owned role and make
+        // the persona the project's PM (O-17i: the task-creation relationship rule applies to apply).
+        $applyPermissionIds = [];
+        // OWN-2026-024 H3 fixture: plus exactly the change-request route codes (the super_admin role-name bypass is gone).
+        $routeCodes = ['change-request.view', 'change-request.create', 'change-request.update', 'change-request.delete', 'change-request.submit', 'change-request.approve', 'change-request.reject'];
+        foreach (['change-request.apply' => ['change-request', 'apply'], 'task.create' => ['task', 'create']] + array_fill_keys($routeCodes, null) as $code => $parts) {
+            [$module, $action] = $parts ?? explode('.', $code, 2);
+            $applyPermissionIds[] = \App\Models\Permission::firstOrCreate(
+                ['code' => $code],
+                ['name' => $code, 'module' => $module, 'action' => $action, 'description' => $code]
+            )->id;
+        }
+        $applyRole = Role::firstOrCreate(['name' => 'o17-cr-apply-fixture'], ['scope' => Role::SCOPE_SYSTEM, 'is_active' => true]);
+        $applyRole->permissions()->syncWithoutDetaching($applyPermissionIds);
+        $this->user->roles()->syncWithoutDetaching($applyRole->id);
+        $this->project->forceFill(['pm_id' => $this->user->id])->save();
+
         $this->token = $this->generateJwtToken($this->user);
     }
 

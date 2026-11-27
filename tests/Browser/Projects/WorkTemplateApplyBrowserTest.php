@@ -45,7 +45,9 @@ class WorkTemplateApplyBrowserTest extends DuskTestCase
             'is_active' => true,
         ]);
         $role = Role::factory()->create(['name' => 'Browser PM ' . uniqid()]);
-        $permissionIds = Permission::whereIn('code', ['project.view', 'template.view', 'template.apply'])->pluck('id');
+        // O-17 fixture (UAT-RECOVERY 06): template preview/apply creates (or dry-runs creating) tasks, so the PM also needs
+        // the canonical task.create grant; template.apply alone is not creation authority.
+        $permissionIds = Permission::whereIn('code', ['project.view', 'template.view', 'template.apply', 'task.create'])->pluck('id');
         $role->permissions()->sync($permissionIds);
         UserRole::query()->create(['user_id' => (string) $this->user->id, 'role_id' => (string) $role->id]);
 

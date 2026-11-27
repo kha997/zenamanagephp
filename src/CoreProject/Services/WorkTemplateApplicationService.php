@@ -280,10 +280,14 @@ class WorkTemplateApplicationService
             $task = $taskMapping[$taskData['id']];
             
             // Tạo assignment với 100% cho default assignee
+            // OWN-2026-024 SPLIT-PERCENT: a freshly created task with a single 100 % default assignee (total ≤ 100 % by
+            // construction); tenant_id from the task and assigned_at (NOT NULL, no default) are now written.
             TaskAssignment::create([
                 'task_id' => $task->id,
                 'user_id' => $defaultAssigneeId,
-                'split_percent' => 100.0
+                'split_percent' => 100.0,
+                'tenant_id' => (string) $task->tenant_id,
+                'assigned_at' => now(),
             ]);
         }
     }

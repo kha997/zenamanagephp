@@ -214,6 +214,21 @@ class TemplateController extends Controller
      */
     public function apply(ApplyTemplateRequest $request, string $id): JsonResponse
     {
+        // O-17 (latent path, parameterless `rbac` gate only): same task-creation authority as every other creation route.
+        $actor = $request->user('api') ?? $request->user();
+        $project = \App\Models\Project::query()
+            ->where('tenant_id', (string) ($actor?->tenant_id ?? ''))
+            ->whereKey((string) $request->get('project_id'))
+            ->first();
+        $denial = $project === null
+            ? \App\Support\TaskCreationAuthority::DENY_TENANT
+            : \App\Support\TaskCreationAuthority::denialReason($actor, $project, true);
+        if ($denial !== null) {
+            \App\Support\TaskCreationAuthority::logDenial($actor, $project, $denial, 'api.templates.apply');
+
+            return JSendResponse::error('Bạn không có quyền thực hiện thao tác này.', 403);
+        }
+
         $template = Template::with(['latestVersion'])->find($id);
         
         if (!$template) {
@@ -225,15 +240,28 @@ class TemplateController extends Controller
         }
         
         try {
-            $result = $this->templateService->applyTemplateToProject(
-                $template,
-                $request->get('project_id'),
-                $request->get('mode', 'full'),
-                $request->get('conditional_tags', []),
-                null,
-                null,
-                $request->user('api')->id  // Sửa từ $request->user()->id
-            );
+            // O-17 Gate 6: the created project tasks and their audit rows commit or roll back together.
+            $result = \Illuminate\Support\Facades\DB::transaction(function () use ($template, $request, $actor, $project) {
+                $existing = \Illuminate\Support\Facades\DB::table('project_tasks')->where('project_id', (string) $project->id)->pluck('id')->all();
+                $result = $this->templateService->applyTemplateToProject(
+                    $template,
+                    $request->get('project_id'),
+                    $request->get('mode', 'full'),
+                    $request->get('conditional_tags', []),
+                    null,
+                    null,
+                    $request->user('api')->id  // Sửa từ $request->user()->id
+                );
+                $created = \Illuminate\Support\Facades\DB::table('project_tasks')
+                    ->where('project_id', (string) $project->id)
+                    ->whereNotIn('id', $existing)
+                    ->pluck('id');
+                foreach ($created as $taskId) {
+                    \App\Support\TaskCreationAuthority::auditIds($actor, (string) $taskId, (string) $project->id, (string) $project->tenant_id, 'api.templates.apply', null, 'project_task');
+                }
+
+                return $result;
+            });
             
             return JSendResponse::success(
                 $result,

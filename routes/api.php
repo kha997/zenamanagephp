@@ -267,11 +267,24 @@ Route::group([], function () {
             |--------------------------------------------------------------------------
             */
             // Unified Project Management Routes
-            Route::apiResource('projects', \App\Http\Controllers\Api\ProjectController::class);
+            Route::apiResource('projects', \App\Http\Controllers\Api\ProjectController::class)->only(['index', 'show']);
             Route::prefix('projects')->group(function () {
-                Route::post('{project}/status', [\App\Http\Controllers\Api\ProjectController::class, 'updateStatus']);
                 Route::get('statistics', [\App\Http\Controllers\Api\ProjectController::class, 'statistics']);
                 Route::get('dropdown', [\App\Http\Controllers\Api\ProjectController::class, 'dropdown']);
+            });
+
+            // UAT-RECOVERY-03b (S3b): project WRITE routes. The controller already enforces exactly these permissions
+            // (Api\ProjectController::store/update/destroy/updateStatus/recalculate*), so the parameterless `rbac` gate
+            // is replaced by the same permission at route level. Authentication + tenant isolation stay in force.
+            // Route names are preserved. Read routes above keep the parameterless gate (Owner decision O-8).
+            Route::withoutMiddleware(['rbac'])->group(function () {
+                $projects = \App\Http\Controllers\Api\ProjectController::class;
+                Route::post('projects', [$projects, 'store'])->middleware('rbac:project.create')->name('projects.store');
+                Route::match(['put', 'patch'], 'projects/{project}', [$projects, 'update'])->middleware('rbac:project.update')->name('projects.update');
+                Route::delete('projects/{project}', [$projects, 'destroy'])->middleware('rbac:project.delete')->name('projects.destroy');
+                Route::post('projects/{project}/status', [$projects, 'updateStatus'])->middleware('rbac:project.update');
+                Route::post('projects/{projectId}/recalculate-progress', [$projects, 'recalculateProgress'])->middleware('rbac:project.update');
+                Route::post('projects/{projectId}/recalculate-actual-cost', [$projects, 'recalculateActualCost'])->middleware('rbac:project.update');
             });
 
             // (Route milestones + project-templates đã gỡ 22/07: Api\ProjectMilestoneController
@@ -444,8 +457,6 @@ Route::group([], function () {
 
             Route::prefix('projects/{projectId}')->group(function () {
                 Route::get('tasks', [TaskController::class, 'index']);
-                Route::post('recalculate-progress', [ProjectController::class, 'recalculateProgress']);
-                Route::post('recalculate-actual-cost', [ProjectController::class, 'recalculateActualCost']);
 
                 // Project-specific baselines
                 Route::apiResource('baselines', BaselineController::class)
@@ -1023,10 +1034,10 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
 });
 
 // Admin Dashboard API Routes (protected)
-Route::prefix('admin/dashboard')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac:admin'])->group(function () {
+// OWN-2026-024 H2a: host-level console = explicit platform permission (was the non-permission string `rbac:admin`, which only
+// the legacy super_admin short-circuit could pass). /activities and /alerts (static mock data, zero references) were retired (D2).
+Route::prefix('admin/dashboard')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac:platform.ops.view'])->group(function () {
     Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats'])->name('api.v1.admin.dashboard.stats');
-    Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities'])->name('api.v1.admin.dashboard.activities');
-    Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts'])->name('api.v1.admin.dashboard.alerts');
     Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics'])->name('api.v1.admin.dashboard.metrics');
 });
 
@@ -1050,23 +1061,30 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rate.limit:api'])->group
         Route::get('dashboard/preferences', [\App\Http\Controllers\Api\DashboardController::class, 'getPreferences']);
     });
 
-    // Cache Management Routes
-    Route::prefix('cache')->middleware(['rbac:admin'])->group(function () {
-        Route::get('stats', [\App\Http\Controllers\Api\CacheController::class, 'getStats']);
-        Route::get('config', [\App\Http\Controllers\Api\CacheController::class, 'getConfig']);
-        Route::post('invalidate/key', [\App\Http\Controllers\Api\CacheController::class, 'invalidateKey']);
-        Route::post('invalidate/tags', [\App\Http\Controllers\Api\CacheController::class, 'invalidateTags']);
-        Route::post('invalidate/pattern', [\App\Http\Controllers\Api\CacheController::class, 'invalidatePattern']);
-        Route::post('warmup', [\App\Http\Controllers\Api\CacheController::class, 'warmUp']);
-        Route::post('clear', [\App\Http\Controllers\Api\CacheController::class, 'clearAll']);
+    // Cache Management Routes — OWN-2026-024 H2a: read = platform.ops.view, shared-cache mutation = platform.cache.manage.
+    Route::prefix('cache')->group(function () {
+        Route::middleware(['rbac:platform.ops.view'])->group(function () {
+            Route::get('stats', [\App\Http\Controllers\Api\CacheController::class, 'getStats']);
+            Route::get('config', [\App\Http\Controllers\Api\CacheController::class, 'getConfig']);
+        });
+        Route::middleware(['rbac:platform.cache.manage'])->group(function () {
+            Route::post('invalidate/key', [\App\Http\Controllers\Api\CacheController::class, 'invalidateKey']);
+            Route::post('invalidate/tags', [\App\Http\Controllers\Api\CacheController::class, 'invalidateTags']);
+            Route::post('invalidate/pattern', [\App\Http\Controllers\Api\CacheController::class, 'invalidatePattern']);
+            Route::post('warmup', [\App\Http\Controllers\Api\CacheController::class, 'warmUp']);
+            Route::post('clear', [\App\Http\Controllers\Api\CacheController::class, 'clearAll']);
+        });
     });
 
     // WebSocket Management Routes
     Route::prefix('websocket')->group(function () {
-        Route::middleware(['rbac:admin'])->group(function () {
+        // OWN-2026-024 H2a: read = platform.ops.view; anything that publishes (incl. the GET /test probe) = platform.realtime.broadcast.
+        Route::middleware(['rbac:platform.ops.view'])->group(function () {
             Route::get('info', [\App\Http\Controllers\Api\WebSocketController::class, 'getConnectionInfo']);
             Route::get('stats', [\App\Http\Controllers\Api\WebSocketController::class, 'getStats']);
             Route::get('channels', [\App\Http\Controllers\Api\WebSocketController::class, 'getChannels']);
+        });
+        Route::middleware(['rbac:platform.realtime.broadcast'])->group(function () {
             Route::get('test', [\App\Http\Controllers\Api\WebSocketController::class, 'testConnection']);
             Route::post('broadcast', [\App\Http\Controllers\Api\WebSocketController::class, 'broadcast']);
             Route::post('notification', [\App\Http\Controllers\Api\WebSocketController::class, 'sendNotification']);
@@ -1078,12 +1096,17 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rate.limit:api'])->group
     });
 
     // Legacy Route Monitoring Routes (protected)
-    Route::prefix('legacy-routes')->middleware(['rbac:admin'])->group(function () {
-        Route::get('/usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'getUsageStats']);
-        Route::get('/migration-phase', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'getMigrationPhaseStats']);
-        Route::get('/report', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'generateReport']);
-        Route::post('/record-usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'recordUsage']);
-        Route::post('/cleanup', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'cleanup']);
+    // OWN-2026-024 H2a: reports = platform.ops.view; writing or clearing the shared telemetry = platform.maintenance.execute.
+    Route::prefix('legacy-routes')->group(function () {
+        Route::middleware(['rbac:platform.ops.view'])->group(function () {
+            Route::get('/usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'getUsageStats']);
+            Route::get('/migration-phase', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'getMigrationPhaseStats']);
+            Route::get('/report', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'generateReport']);
+        });
+        Route::middleware(['rbac:platform.maintenance.execute'])->group(function () {
+            Route::post('/record-usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'recordUsage']);
+            Route::post('/cleanup', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'cleanup'])->middleware('platform.guarded:legacy-routes.cleanup');
+        });
     });
 
     // Dashboard preferences update (no caching)

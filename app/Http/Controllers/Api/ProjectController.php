@@ -215,7 +215,22 @@ class ProjectController extends Controller
             }
 
             $data = $request->validated();
-            $project = $this->projectService->updateProject($project, $data, $user->id);
+
+            // UAT-RECOVERY-04b (O-11): changing pm_id changes who holds PM authority over the project's tasks.
+            if (array_key_exists('pm_id', $data) && !\App\Support\ProjectPmAssignment::allows($user, $project, $data['pm_id'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You are not allowed to change the project manager of this project',
+                ], 403);
+            }
+
+            $oldPm = $project->getAttribute('pm_id') === null ? null : (string) $project->getAttribute('pm_id');
+            $project = \Illuminate\Support\Facades\DB::transaction(function () use ($project, $data, $user, $oldPm) {
+                $updated = $this->projectService->updateProject($project, $data, $user->id);
+                \App\Support\ProjectPmAssignment::audit($user, $updated, $oldPm, $updated->getAttribute('pm_id') === null ? null : (string) $updated->getAttribute('pm_id'), 'project.update');
+
+                return $updated;
+            });
 
             return $this->zenaSuccessResponse(
                 $project->load(['client', 'projectManager', 'teamMembers']),

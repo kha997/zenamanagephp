@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\PlatformPermissions;
 use Illuminate\Database\Seeder;
 
 class RolePermissionSeeder extends Seeder
@@ -61,13 +62,13 @@ class RolePermissionSeeder extends Seeder
                 'name' => 'super_admin',
                 'scope' => 'system',
                 'description' => 'Full system access',
-                'permissions' => Permission::all()->pluck('code')->toArray(),
+                'permissions' => PlatformPermissions::excludeFrom(Permission::query())->pluck('code')->toArray(), // OWN-2026-024: never platform.*
             ],
             [
                 'name' => 'admin',
                 'scope' => 'system',
                 'description' => 'Administrative access',
-                'permissions' => Permission::all()->pluck('code')->toArray(),
+                'permissions' => PlatformPermissions::excludeFrom(Permission::query())->pluck('code')->toArray(), // OWN-2026-024: never platform.*
             ],
             [
                 'name' => 'project_manager',

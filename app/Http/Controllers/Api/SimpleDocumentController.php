@@ -61,6 +61,9 @@ class SimpleDocumentController extends Controller
 
     public function index(Request $request)
     {
+        // OWN-2026-024 H4: also reached via api/documents-simple, whose only route gate is the parameterless `rbac`
+        // role-name gate — the canonical policy is the real check (document.view), as for show/update.
+        $this->authorize('viewAny', Document::class);
         $validator = Validator::make($request->query(), [
             'status' => ['sometimes', 'string', 'max:255'],
             'lifecycle_status' => ['sometimes', 'string', Rule::enum(DocumentLifecycleStatus::class)],
@@ -123,6 +126,8 @@ class SimpleDocumentController extends Controller
 
     public function store(Request $request)
     {
+        // OWN-2026-024 H4: see index() — canonical document.create, independent of the route gate.
+        $this->authorize('create', Document::class);
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'project_id' => 'required|string|exists:projects,id',
@@ -815,6 +820,11 @@ class SimpleDocumentController extends Controller
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
+
+        // OWN-2026-024 H4 (Gate 3 "unauthorized document deletion is denied"): destroy had NO object-level check, and
+        // api/documents-simple/{id} is gated only by the parameterless role-name `rbac` gate. Deletion now needs the canonical
+        // DocumentPolicy::delete (document.delete AND Owner authority, tenant-bound) before any file or row is removed.
+        $this->authorize('delete', $document);
 
         $disk = config('filesystems.default', 'local');
         $paths = $document->versions()->pluck('file_path')

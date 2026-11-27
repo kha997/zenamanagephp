@@ -1,0 +1,11 @@
+tests/Feature/Console/BackupRetentionTest.php :: Tests: 6, Assertions: 16, Failures: 1. 
+tests/Feature/Console/BackupContentsSafetyTest.php :: OK (3 tests, 80814 assertions) 
+tests/Feature/GAP058/BadgeApiRetiredTest.php :: Tests: 3, Assertions: 2, Errors: 1. 
+tests/Feature/Zena/OperatorCrmUiTest.php :: OK (27 tests, 136 assertions) 
+tests/Feature/Dashboard/DashboardApiTest.php :: Tests: 49, Assertions: 265, Failures: 7, PHPUnit Deprecations: 49. 
+tests/Feature/GAP059/ConfigureSmtpWritesEnvSafelyTest.php :: Tests: 8, Assertions: 10, Failures: 7, PHPUnit Deprecations: 1. 
+tests/Feature/Zena/DocumentTemplateRenderTest.php :: OK (14 tests, 19 assertions) 
+tests/Feature/Zena/OperatorDesignItemUiTest.php :: OK (6 tests, 30 assertions) 
+tests/Feature/Zena/OperatorInspectionUiTest.php :: OK (3 tests, 19 assertions) 
+tests/Feature/Api/ExportTenantIsolationTest.php :: OK, but there were issues! Tests: 39, Assertions: 267, PHPUnit Deprecations: 39. 
+tests/Feature/Api/LegacyCsvExportSafetyTest.php :: OK, but there were issues! Tests: 54, Assertions: 171, PHPUnit Deprecations: 54. 

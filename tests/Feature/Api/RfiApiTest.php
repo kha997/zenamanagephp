@@ -28,7 +28,8 @@ class RfiApiTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin();
+        // OWN-2026-024 H3 fixture: the super_admin role-name bypass is gone; grant exactly the codes these routes are gated on.
+        $this->apiActingAsTenantAdmin([], null, ['rfi.view', 'rfi.create', 'rfi.edit', 'rfi.delete', 'rfi.assign', 'rfi.respond', 'rfi.escalate', 'rfi.close', 'rfi.cancel', 'rfi.resolve-escalation']);
         $this->user = $this->apiFeatureUser;
         $this->project = Project::factory()->create([
             'created_by' => $this->user->id,

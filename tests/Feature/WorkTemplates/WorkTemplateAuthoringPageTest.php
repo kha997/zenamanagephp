@@ -50,6 +50,7 @@ class WorkTemplateAuthoringPageTest extends TestCase
         $this->tenant = Tenant::factory()->create();
         $this->owner = $this->createTenantUser($this->tenant, ['name' => 'Chủ'], ['wt_owner'], [
             'template.view', 'template.edit_draft', 'template.publish', 'template.apply', 'project.view',
+            'task.create', // O-17 fixture (UAT-RECOVERY 06): applying a template creates tasks, which also needs task.create
         ]);
         $this->pm = $this->createTenantUser($this->tenant, ['name' => 'PM'], ['wt_pm'], ['template.view', 'template.apply', 'project.view']);
     }

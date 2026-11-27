@@ -47,25 +47,9 @@ class UpdateTaskAssignmentRequest extends BaseApiRequest
             $assignmentId = $this->route('taskAssignment');
             $newSplitPercentage = $this->input('split_percent');
             
-            // Kiểm tra tổng phần trăm không vượt quá 100% khi cập nhật
-            if ($assignmentId && $newSplitPercentage !== null) {
-                $assignment = TaskAssignment::find($assignmentId);
-                if ($assignment) {
-                    $currentTotal = TaskAssignment::where('task_id', $assignment->task_id)
-                        ->where('id', '!=', $assignmentId)
-                        ->sum('split_percent');
-                        
-                    if (($currentTotal + $newSplitPercentage) > 100) {
-                        $validator->errors()->add(
-                            'split_percent',
-                            'Tổng phần trăm phân chia cho task này sẽ vượt quá 100%. ' .
-                            'Hiện tại (không tính assignment này): ' . $currentTotal . '%, ' .
-                            'cập nhật thành: ' . $newSplitPercentage . '%'
-                        );
-                    }
-                }
-            }
-            
+            // OWN-2026-024 SPLIT-PERCENT: the 100 % check moved out of pre-controller validation (it ran before the O-13 authority
+            // check and leaked another task's allocation); the controller enforces it after authority, under the task-row lock.
+
             // Cảnh báo khi thay đổi role của primary assignee
             if ($this->has('role') && $assignmentId) {
                 $assignment = TaskAssignment::find($assignmentId);

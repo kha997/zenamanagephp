@@ -86,14 +86,10 @@ class OperatorNavigationComposer
      */
     public function loadPermissionNames(User $actor): array
     {
-        return $actor->roles()
-            ->with('permissions:id,name')
-            ->get()
-            ->flatMap(fn ($role) => $role->permissions)
-            ->pluck('name')
-            ->unique()
-            ->values()
-            ->all();
+        // OWN-2026-024 H4 (Gate 3 "sidebar visibility follows real permissions"): the same rules as the route gate —
+        // durable revocations excluded and platform.* codes only for an active Platform Operator — instead of reading every
+        // role_permissions row directly (which showed revoked / ledger-less items in the navigation).
+        return $actor->grantedPermissionNames();
     }
 
     /**

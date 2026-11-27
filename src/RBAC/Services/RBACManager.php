@@ -2,6 +2,10 @@
 
 namespace Src\RBAC\Services;
 
+use App\Support\PlatformPermissions;
+use App\Support\Rbac\PermissionRevocations;
+use App\Support\Rbac\RbacProtection;
+use App\Support\Rbac\SecurityAudit;
 use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
 use Src\RBAC\Models\UserRoleSystem;
@@ -13,6 +17,7 @@ use App\Models\User;
 use App\Models\Project;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -334,6 +339,12 @@ class RBACManager
      */
     public function assignSystemRole(string $userId, string $roleId, string $tenantId): bool
     {
+        // OWN-2026-024 H2a (Owner Gate 2, D6): a role carrying platform authority is never assignable through tenant role
+        // management (HTTP or bulk). Platform Operators are provisioned by a separate server-only step (H2b).
+        if (PlatformPermissions::roleHoldsPlatformPermission($roleId)) {
+            return false;
+        }
+
         if (!$this->userBelongsToTenant($userId, $tenantId)) {
             return false;
         }
@@ -352,16 +363,56 @@ class RBACManager
             return false;
         }
 
-        // Thay thế firstOrCreate() bằng exists() check và create() riêng biệt
-        $exists = UserRoleSystem::where('user_id', $userId)
-            ->where('role_id', $roleId)
-            ->exists();
+        // OWN-2026-024 H2b (Owner Gate 2, D5): privileged roles (the Owner role, any role with a protected code) need real
+        // canonical Owner authority, same tenant, never self; fail closed with no write.
+        $actor = RbacProtection::currentActor();
+        if (RbacProtection::privilegedRoleChangeDenial($actor, $userId, $roleId, false) !== null) {
+            return false;
+        }
+        $privileged = RbacProtection::isPrivilegedRole($roleId);
 
-        if (!$exists) {
-            UserRoleSystem::create([
-                'user_id' => $userId,
-                'role_id' => $roleId
-            ]);
+        // Thay thế firstOrCreate() bằng exists() check và create() riêng biệt
+        // UAT-RECOVERY-01 S2: `system_user_roles` stays the GAP-042 assignment ledger, but authorization
+        // (User::hasPermission → rbac: gate) reads `user_roles`. Both rows are written in ONE transaction
+        // (all-or-nothing, idempotent) so a successful assignment is always visible to authorization.
+        try {
+            DB::transaction(function () use ($userId, $roleId, $tenantId, $actor, $privileged): void {
+                $exists = UserRoleSystem::where('user_id', $userId)
+                    ->where('role_id', $roleId)
+                    ->exists();
+
+                if ($privileged && !DB::table('user_roles')->where('user_id', $userId)->where('role_id', $roleId)->exists()) {
+                    // OWN-2026-024 H2b: transactional audit for every successful privileged assignment (rolls back with it).
+                    SecurityAudit::record((string) $actor?->id, $tenantId, 'rbac.privileged_role.assigned', 'user', $userId, PermissionRevocations::actorLabel($actor), [
+                        'role_id' => $roleId,
+                        'role' => RbacProtection::roleName($roleId),
+                    ]);
+                }
+
+                if (!$exists) {
+                    UserRoleSystem::create([
+                        'user_id' => $userId,
+                        'role_id' => $roleId
+                    ]);
+                }
+
+                DB::table('user_roles')->insertOrIgnore([
+                    'user_id' => $userId,
+                    'role_id' => $roleId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                // MySQL's INSERT IGNORE downgrades FK/other errors to warnings: never trust the insert,
+                // verify the row, and roll BOTH writes back if the projection is not really there.
+                if (!DB::table('user_roles')->where('user_id', $userId)->where('role_id', $roleId)->exists()) {
+                    throw new \RuntimeException('user_roles projection was not persisted');
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::warning('rbac.assignSystemRole.rolled_back', ['user_id' => $userId, 'role_id' => $roleId, 'reason' => $e->getMessage()]);
+
+            return false;
         }
 
         // Xóa cache
@@ -394,6 +445,17 @@ class RBACManager
      */
     public function assignCustomRole(string $userId, string $roleId, string $tenantId): bool
     {
+        // OWN-2026-024 H2b (D5): no privileged role through custom/project assignment without real Owner authority.
+        if (RbacProtection::privilegedRoleChangeDenial(RbacProtection::currentActor(), $userId, $roleId, false) !== null) {
+            return false;
+        }
+
+        // OWN-2026-024 H2a (Owner Gate 2, D6): a role carrying platform authority is never assignable through tenant role
+        // management (HTTP or bulk). Platform Operators are provisioned by a separate server-only step (H2b).
+        if (PlatformPermissions::roleHoldsPlatformPermission($roleId)) {
+            return false;
+        }
+
         if (!$this->userBelongsToTenant($userId, $tenantId)) {
             return false;
         }
@@ -439,6 +501,17 @@ class RBACManager
      */
     public function assignProjectRole(string $userId, string $roleId, string $projectId, string $tenantId): bool
     {
+        // OWN-2026-024 H2b (D5): no privileged role through custom/project assignment without real Owner authority.
+        if (RbacProtection::privilegedRoleChangeDenial(RbacProtection::currentActor(), $userId, $roleId, false) !== null) {
+            return false;
+        }
+
+        // OWN-2026-024 H2a (Owner Gate 2, D6): a role carrying platform authority is never assignable through tenant role
+        // management (HTTP or bulk). Platform Operators are provisioned by a separate server-only step (H2b).
+        if (PlatformPermissions::roleHoldsPlatformPermission($roleId)) {
+            return false;
+        }
+
         if (!$this->userBelongsToTenant($userId, $tenantId)) {
             return false;
         }
@@ -502,13 +575,41 @@ class RBACManager
             return false;
         }
 
+        // OWN-2026-024 H2b (D5): removing a privileged role (incl. the last active Owner) needs real Owner authority, never self.
+        $actor = RbacProtection::currentActor();
+        if (RbacProtection::privilegedRoleChangeDenial($actor, $userId, $roleId, true) !== null) {
+            return false;
+        }
+        $privileged = RbacProtection::isPrivilegedRole($roleId);
+
         $deleted = false;
 
         switch ($scope) {
             case 'system':
-                $deleted = UserRoleSystem::where('user_id', $userId)
-                    ->where('role_id', $roleId)
-                    ->delete() > 0;
+                // UAT-RECOVERY-01 S2: remove the ledger row and its authorization projection together.
+                // `user_roles` is touched ONLY when a ledger row was actually revoked here, so an
+                // independently-sourced user_roles row (no ledger row) is never deleted by this path.
+                $deleted = DB::transaction(function () use ($userId, $roleId, $tenantId, $actor, $privileged): bool {
+                    $removed = UserRoleSystem::where('user_id', $userId)
+                        ->where('role_id', $roleId)
+                        ->delete() > 0;
+
+                    if ($removed && $privileged) {
+                        SecurityAudit::record((string) $actor?->id, $tenantId, 'rbac.privileged_role.removed', 'user', $userId, PermissionRevocations::actorLabel($actor), [
+                            'role_id' => $roleId,
+                            'role' => RbacProtection::roleName($roleId),
+                        ]);
+                    }
+
+                    if ($removed) {
+                        DB::table('user_roles')
+                            ->where('user_id', $userId)
+                            ->where('role_id', $roleId)
+                            ->delete();
+                    }
+
+                    return $removed;
+                });
                 break;
 
             case 'custom':

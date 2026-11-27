@@ -17,6 +17,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Services\ErrorEnvelopeService;
 use App\Services\ZenaAuditLogger;
+use App\Support\TaskCreationAuthority;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -848,6 +849,13 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
+            // CB-4 (task-creation entry point): apply creates the canonical "CR delta" task, so the canonical
+            // change-request.apply grant is required here, independent of the route middleware's `super_admin` short-circuit.
+            // O-17i (Owner, 2026-11-24): the full task-creation contract is also enforced below, once the project is known.
+            if (!$user instanceof \App\Models\User || !$user->hasPermission('change-request.apply')) {
+                return $this->forbidden('Bạn không có quyền thực hiện thao tác này.');
+            }
+
             $tenantId = $this->tenantId($request);
             if ($tenantId === '') {
                 return ErrorEnvelopeService::error(
@@ -866,6 +874,21 @@ class ChangeRequestController extends BaseApiController
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
+            }
+
+            // O-17i: apply creates a task in the change request's project, so the actor must also satisfy the task-creation
+            // contract (same tenant, canonical task.create, project PM or active participant). No role-name exception.
+            $crProject = Project::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((string) $changeRequest->project_id)
+                ->first();
+            $denial = $crProject === null
+                ? TaskCreationAuthority::DENY_TENANT
+                : TaskCreationAuthority::denialReason($user, $crProject);
+            if ($denial !== null) {
+                TaskCreationAuthority::logDenial($user, $crProject, $denial, 'change-request.apply');
+
+                return $this->forbidden('Bạn không có quyền thực hiện thao tác này.');
             }
 
             if ($changeRequest->status !== 'approved') {
@@ -890,6 +913,8 @@ class ChangeRequestController extends BaseApiController
             ]);
 
             $task = $this->createCanonicalTaskDelta($changeRequest, (string) $user->id);
+            // O-17 Gate 6: the derived task is audited inside the same transaction as its creation.
+            TaskCreationAuthority::audit($user, $task, 'change-request.apply');
             $this->createTaskLinkBack($changeRequest, $task);
             $this->createBaselineSnapshot($changeRequest, (string) $user->id);
 

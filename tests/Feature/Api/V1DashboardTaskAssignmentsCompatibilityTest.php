@@ -20,6 +20,7 @@ use Tests\TestCase;
 class V1DashboardTaskAssignmentsCompatibilityTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Traits\TenantUserFactoryTrait; // S4b/O-13 fixture: canonical permission for the acting PM
 
     private Tenant $tenant;
 
@@ -41,7 +42,9 @@ class V1DashboardTaskAssignmentsCompatibilityTest extends TestCase
         $this->withoutMiddleware();
 
         $this->tenant = Tenant::factory()->create();
-        $this->user = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        // S4b/O-13 fixture: the acting user is the project PM and holds task.assign (assignment is a PM-only operation).
+        $this->user = $this->createTenantUser($this->tenant, [], null, ['task.assign']);
+        $this->actingAs($this->user, 'api');
         $this->otherUser = User::factory()->create(['tenant_id' => $this->tenant->id]);
         $this->project = Project::query()->create([
             'tenant_id' => $this->tenant->id,
@@ -49,6 +52,7 @@ class V1DashboardTaskAssignmentsCompatibilityTest extends TestCase
             'name' => 'Dashboard Compatibility Project',
             'status' => 'active',
         ]);
+        DB::table('projects')->where('id', $this->project->id)->update(['pm_id' => $this->user->id]); // S4b/O-13 fixture: acting user is the project PM
         $this->task = Task::query()->create([
             'project_id' => $this->project->id,
             'tenant_id' => $this->tenant->id,

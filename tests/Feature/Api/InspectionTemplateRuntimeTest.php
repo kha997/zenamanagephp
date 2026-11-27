@@ -38,7 +38,7 @@ class InspectionTemplateRuntimeTest extends TestCase
         $tenant = Tenant::query()->orderBy('created_at')->firstOrFail();
         $actor = $this->createActorWithPermissions($tenant, [
             'template.view',
-            'template.apply',
+            'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */,
             'inspection.create',
             'inspection.view',
             'inspection.conduct',
@@ -194,13 +194,13 @@ class InspectionTemplateRuntimeTest extends TestCase
 
         $actorA = $this->createActorWithPermissions($tenantA, [
             'template.view',
-            'template.apply',
+            'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */,
             'inspection.create',
             'inspection.view',
             'inspection.conduct',
             'inspection.complete',
         ]);
-        $actorB = $this->createActorWithPermissions($tenantB, ['template.view', 'template.apply']);
+        $actorB = $this->createActorWithPermissions($tenantB, ['template.view', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
 
         $projectA = Project::factory()->create([
             'tenant_id' => (string) $tenantA->id,

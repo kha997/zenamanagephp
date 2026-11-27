@@ -2,6 +2,9 @@
 
 namespace App\Policies;
 
+use App\Models\Task;
+use App\Models\User;
+
 class TaskPolicy
 {
     /**
@@ -81,61 +84,63 @@ class TaskPolicy
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Determine whether the user can update the model (fields, status, completion, block/unblock, dependencies).
+     *
+     * UAT-RECOVERY-04/04b. Operation-specific, tenant-bound, canonical DB permissions + task relationships;
+     * `users.role` is never consulted and no permission (task.delete included, O-10) implies another operation:
+     *   (a) assignee: tasks.assignee_id, or a task_assignments row with role = assignee;
+     *   (b) the owning project's PM (projects.pm_id) who holds task.update.
      */
     public function update(User $user, Task $task)
     {
-        // SuperAdmin/Admin can update all tasks
-        if ($user->hasRole(['super_admin', 'admin'])) {
-            return true;
-        }
-
-        // PM can update tasks in projects they manage
-        if ($user->hasRole('project_manager') && $task->project->pm_id === $user->id) {
-            return true;
-        }
-
-        // Assignee can update their assigned tasks
-        if ($task->assignee_id === $user->id) {
-            return true;
-        }
-
-        return false;
+        return $this->sameTenant($user, $task)
+            && ($this->isAssignee($user, $task) || $this->isProjectManagerHolding($user, $task, 'task.update'));
     }
 
     /**
      * Determine whether the user can delete the model.
+     * Independent operation: the owning project's PM (holding task.update) or a holder of task.delete.
      */
     public function delete(User $user, Task $task)
     {
-        // Only SuperAdmin, Admin, and PM can delete tasks
-        if ($user->hasRole(['super_admin', 'admin'])) {
-            return true;
-        }
-
-        if ($user->hasRole('project_manager') && $task->project->pm_id === $user->id) {
-            return true;
-        }
-
-        return false;
+        return $this->sameTenant($user, $task)
+            && ($this->isProjectManagerHolding($user, $task, 'task.update') || $user->hasPermission('task.delete'));
     }
 
     /**
-     * Determine whether the user can assign the task.
+     * Determine whether the user can assign / reassign / unassign the task.
+     * Only the owning project's PM holding task.assign. Being an assignee, or holding any other permission, is not enough.
      */
     public function assign(User $user, Task $task)
     {
-        // SuperAdmin/Admin can assign any task
-        if ($user->hasRole(['super_admin', 'admin'])) {
+        return $this->sameTenant($user, $task)
+            && $this->isProjectManagerHolding($user, $task, 'task.assign');
+    }
+
+    private function sameTenant(User $user, Task $task): bool
+    {
+        return $user->getAttribute('tenant_id') !== null && (string) $user->getAttribute('tenant_id') === (string) $task->getAttribute('tenant_id');
+    }
+
+    private function isAssignee(User $user, Task $task): bool
+    {
+        if ($task->assignee_id !== null && (string) $task->assignee_id === (string) $user->id) {
             return true;
         }
 
-        // PM can assign tasks in projects they manage
-        if ($user->hasRole('project_manager') && $task->project->pm_id === $user->id) {
-            return true;
-        }
+        return $task->assignments()
+            ->where('user_id', $user->id)
+            ->where('role', 'assignee')
+            ->exists();
+    }
 
-        return false;
+    private function isProjectManagerHolding(User $user, Task $task, string $permission): bool
+    {
+        $pmId = $task->project?->pm_id;
+
+        return $pmId !== null
+            && (string) $pmId === (string) $user->id
+            && $user->hasPermission($permission);
     }
 
     /**

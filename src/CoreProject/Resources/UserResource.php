@@ -44,7 +44,11 @@ class UserResource extends BaseApiResource
      */
     private function getActiveTasksCount(): int
     {
-        return $this->assignedTasks()
+        // OWN-2026-024: User has no assignedTasks() relation, so this crashed every v1 response that embedded an assignment's
+        // user (e.g. POST api/v1/tasks with assignments returned 500 after committing). Count the user's assigned tasks
+        // through task_assignments instead.
+        return \App\Models\Task::query()
+            ->whereIn('id', \Illuminate\Support\Facades\DB::table('task_assignments')->select('task_id')->where('user_id', $this->resource->getKey()))
             ->whereNotIn('status', ['completed', 'cancelled'])
             ->count();
     }

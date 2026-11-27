@@ -1,0 +1,3 @@
+# OWN-2026-024 — documented Recovery failures on MySQL/MariaDB (baseline MAP only; listing a test here never makes it pass).
+# Format: <Fully\Qualified\Class>::<method><TAB><baseline defect id and source>
+# 2026-11-26: the SPLIT-PERCENT entries (2 x UatRecovery04bTaskSurfaceTest, SQLSTATE[42S22] Unknown column 'split_percent') were removed when the column and its persistence were repaired (migration 2026_11_26_100000). The list is now EMPTY: every Recovery failure on MySQL is NEW.

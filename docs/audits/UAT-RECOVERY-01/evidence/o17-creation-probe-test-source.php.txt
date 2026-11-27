@@ -1,0 +1,238 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Recovery;
+
+use App\Http\Middleware\VerifyCsrfToken;
+use App\Models\Project;
+use App\Models\Tenant;
+use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
+use Tests\Feature\Api\Concerns\InteractsWithWorkTemplateV2;
+use Tests\TestCase;
+
+/**
+ * O-17 read-only reproduction probe (scratchpad only, never committed). Isolated in-memory SQLite DB per run.
+ * Records CURRENT behaviour; asserts nothing about desired policy. Probe-only fixtures (a "Probe Creator" role holding
+ * task.create, a project-scoped membership role) exist only in the throwaway test DB.
+ */
+class O17CreationProbeTest extends TestCase
+{
+    use RefreshDatabase;
+    use InteractsWithWorkTemplateV2;
+
+    private array $rows = [];
+
+    private function roleId(string $name): ?string
+    {
+        return DB::table('roles')->where('name', $name)->value('id');
+    }
+
+    private function user(Tenant $t, ?string $role, ?string $legacy): User
+    {
+        $u = User::factory()->create(['tenant_id' => $t->id, 'role' => $legacy, 'is_active' => true]);
+        if ($role !== null) {
+            DB::table('user_roles')->insert(['user_id' => $u->id, 'role_id' => $this->roleId($role), 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        return $u;
+    }
+
+    private function customRole(string $name, array $codes, string $scope = 'system', ?string $tenantId = null): string
+    {
+        $id = (string) Str::ulid();
+        $row = ['id' => $id, 'name' => $name, 'scope' => $scope, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()];
+        if (Schema::hasColumn('roles', 'tenant_id')) {
+            $row['tenant_id'] = $tenantId;
+        }
+        DB::table('roles')->insert($row);
+        foreach (DB::table('permissions')->whereIn('code', $codes)->pluck('id') as $pid) {
+            DB::table('role_permissions')->insert(['role_id' => $id, 'permission_id' => $pid, 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        return $id;
+    }
+
+    private function counts(): array
+    {
+        $c = [];
+        foreach (['tasks', 'task_assignments', 'audit_logs', 'task_watchers', 'work_instances'] as $t) {
+            $c[$t] = Schema::hasTable($t) ? DB::table($t)->count() : null;
+        }
+
+        return $c;
+    }
+
+    private function hit(string $scenario, string $actor, User $u, string $kind, string $uri, array $data, string $note = ''): array
+    {
+        $before = $this->counts();
+        $status = null;
+        $body = '';
+        try {
+            $this->app['auth']->forgetGuards();
+            if ($kind === 'web') {
+                $res = $this->actingAs($u)->withSession(['_token' => 't'])->call('POST', $uri, $data + ['_token' => 't'], [], [], ['HTTP_ACCEPT' => 'text/html']);
+                $status = $res->getStatusCode();
+                $flash = session('error') ?? (session('errors') ? json_encode(session('errors')->getMessages()) : null) ?? session('success');
+                $body = 'location=' . $res->headers->get('Location') . ' flash=' . (is_string($flash) ? $flash : json_encode($flash));
+            } else {
+                if ($kind === 'api-v1') {
+                    $this->actingAs($u, 'api');
+                }
+                Sanctum::actingAs($u);
+                $res = $this->withHeaders(['X-Tenant-ID' => (string) $u->tenant_id, 'Accept' => 'application/json'])->postJson($uri, $data);
+                $status = $res->getStatusCode();
+                $body = $res->getContent();
+            }
+        } catch (\Throwable $e) {
+            $status = 'EXC';
+            $body = get_class($e) . ': ' . $e->getMessage();
+        }
+        $after = $this->counts();
+        $delta = [];
+        foreach ($after as $k => $v) {
+            $delta[$k] = $v === null ? null : $v - $before[$k];
+        }
+        $row = compact('scenario', 'actor', 'uri', 'status', 'delta', 'note') + ['body' => mb_substr((string) $body, 0, 300)];
+        $this->rows[] = $row;
+
+        return $row;
+    }
+
+    private function lastTask(): ?object
+    {
+        return DB::table('tasks')->orderByDesc('created_at')->orderByDesc('id')->first();
+    }
+
+    public function test_probe(): void
+    {
+        $this->withoutMiddleware(VerifyCsrfToken::class);
+        $this->setUpWorkTemplateV2Routes();
+        $this->seed(DatabaseSeeder::class);
+
+        $grants = [];
+        foreach (['System Admin', 'Project Manager', 'Project Member', 'super_admin'] as $r) {
+            $rid = $this->roleId($r);
+            $grants[$r] = $rid === null ? 'ROLE_ABSENT' : array_values(array_intersect(
+                ['task.create', 'template.apply', 'template.view', 'auth.bulk.manage', 'inspection.edit', 'change-request.apply', 'task.assign', 'role.assign', 'project.assign_manager'],
+                DB::table('role_permissions')->join('permissions', 'permissions.id', '=', 'role_permissions.permission_id')->where('role_id', $rid)->pluck('permissions.code')->all()
+            ));
+        }
+
+        $A = Tenant::factory()->create();
+        $B = Tenant::factory()->create();
+        $pm1 = $this->user($A, 'Project Manager', 'project_manager');
+        $pm2 = $this->user($A, 'Project Manager', 'project_manager');
+        $admin = $this->user($A, 'System Admin', 'admin');
+        $creatorRole = $this->customRole('Probe Creator', ['task.create']);
+        $tmplRole = $this->customRole('Probe Template Applier', ['template.apply', 'template.view']);
+        $projRole = $this->customRole('Probe Project Participant', [], 'project', $A->id);
+        $creator = $this->user($A, null, 'team_member');
+        $lonely = $this->user($A, null, 'team_member');
+        $tmpl = $this->user($A, null, 'team_member');
+        foreach ([[$creator, $creatorRole], [$lonely, $creatorRole], [$tmpl, $tmplRole]] as [$u, $rid]) {
+            DB::table('user_roles')->insert(['user_id' => $u->id, 'role_id' => $rid, 'created_at' => now(), 'updated_at' => now()]);
+        }
+        $outsiderA = $this->user($A, 'Project Member', 'team_member');
+        $userB = $this->user($B, 'Project Manager', 'project_manager');
+
+        $p1 = Project::factory()->create(['tenant_id' => $A->id, 'pm_id' => $pm1->id]);
+        $p2 = Project::factory()->create(['tenant_id' => $A->id, 'pm_id' => $pm2->id]);
+        $p3 = Project::factory()->create(['tenant_id' => $A->id, 'pm_id' => null]);
+        $pB = Project::factory()->create(['tenant_id' => $B->id, 'pm_id' => $userB->id]);
+        DB::table('project_user_roles')->insert(['id' => (string) Str::ulid(), 'project_id' => $p1->id, 'user_id' => $creator->id, 'role_id' => $projRole, 'created_at' => now(), 'updated_at' => now()]);
+
+        $n = 0;
+        $pl = function (Project $p) use (&$n): array {
+            $n++;
+
+            return ['project_id' => $p->id, 'name' => "probe task {$n}", 'start_date' => '2026-12-01', 'end_date' => '2026-12-05'];
+        };
+        $endpoints = [['api', '/api/zena/tasks'], ['api', '/api/tasks'], ['api-v1', '/api/v1/tasks'], ['web', '/app/tasks'], ['web', '/operator/schedule/tasks']];
+        $matrix = function (string $sc, string $actor, User $u, Project $p) use ($endpoints, $pl): void {
+            foreach ($endpoints as [$kind, $uri]) {
+                $this->hit($sc, $actor, $u, $kind, $uri, $pl($p));
+            }
+        };
+
+        $matrix('A own project', 'PM1 (pm_id of P1)', $pm1, $p1);
+        $matrix('B other PM project', 'PM1', $pm1, $p2);
+        $matrix('B2 unmanaged project (pm_id NULL)', 'PM1', $pm1, $p3);
+        $matrix('C task.create + participant of P1', 'Creator', $creator, $p1);
+        $matrix('D task.create, not participant of P2', 'Creator', $creator, $p2);
+        $matrix('E task.create, no membership anywhere', 'Lonely', $lonely, $p1);
+        $matrix('F System Admin, not PM/participant', 'SystemAdmin', $admin, $p1);
+        $matrix('C0 seeded Project Member (no task.create)', 'Member', $outsiderA, $p1);
+        $matrix('G cross-tenant project', 'PM1', $pm1, $pB);
+
+        // F2: a user whose only DB role is `super_admin` (name used by production:rbac) — middleware isSuperAdmin() bypass.
+        $superRid = $this->roleId('super_admin') ?? $this->customRole('super_admin', []);
+        $super = $this->user($A, null, null);
+        DB::table('user_roles')->insert(['user_id' => $super->id, 'role_id' => $superRid, 'created_at' => now(), 'updated_at' => now()]);
+        $matrix('F2 super_admin DB role (as granted by probe/seed)', 'SuperAdminRole', $super, $p1);
+
+        // I: assignment / watchers at creation
+        $r = $this->hit('I1 assignee_id = other-tenant user', 'PM1', $pm1, 'api', '/api/zena/tasks', $pl($p1) + ['assignee_id' => $userB->id]);
+        $t = $this->lastTask();
+        $this->rows[] = ['scenario' => 'I1 persisted', 'assignee_id_on_row' => $t?->assignee_id, 'expected_userB' => $userB->id, 'task_tenant' => $t?->tenant_id];
+        $this->hit('I2 assignee_id = same-tenant non-participant', 'PM1', $pm1, 'api', '/api/zena/tasks', $pl($p1) + ['assignee_id' => $outsiderA->id]);
+        $t = $this->lastTask();
+        $this->rows[] = ['scenario' => 'I2 persisted', 'assignee_id_on_row' => $t?->assignee_id];
+        $this->hit('I3 watchers = other-tenant user', 'PM1', $pm1, 'api', '/api/zena/tasks', $pl($p1) + ['watchers' => [$userB->id]]);
+        $this->rows[] = ['scenario' => 'I3 persisted', 'watcher_rows_for_userB' => Schema::hasTable('task_watchers') ? DB::table('task_watchers')->where('user_id', $userB->id)->count() : 'no table'];
+        $this->hit('I4 v1 assignments[].user_id = other-tenant user', 'PM1', $pm1, 'api-v1', '/api/v1/tasks', $pl($p1) + ['assignments' => [['user_id' => $userB->id, 'role' => 'assignee']]]);
+        $t = $this->lastTask();
+        $this->rows[] = ['scenario' => 'I4 persisted', 'task_tenant' => $t?->tenant_id, 'assignment_rows_for_userB' => DB::table('task_assignments')->where('user_id', $userB->id)->count()];
+        $this->hit('I5 parent_id = other-tenant task', 'PM1', $pm1, 'api', '/api/zena/tasks', $pl($p1) + ['parent_id' => (string) DB::table('tasks')->where('tenant_id', $B->id)->value('id')], 'no tenant-B task exists unless created above');
+
+        // Bulk create (auth.bulk.manage)
+        foreach ([['SystemAdmin', $admin], ['PM1', $pm1]] as [$who, $u]) {
+            $this->hit('K1 bulk create, tenant_id + project of tenant B', $who, $u, 'api', '/api/auth/bulk/tasks/create', ['project_id' => $pB->id, 'tenant_id' => $B->id, 'tasks' => [['title' => "bulk {$who}", 'name' => "bulk {$who}", 'description' => 'x']]]);
+            $t = DB::table('tasks')->where('name', "bulk {$who}")->first();
+            $this->rows[] = ['scenario' => 'K1 persisted', 'actor' => $who, 'row_tenant' => $t?->tenant_id, 'row_project' => $t?->project_id, 'tenantB' => $B->id];
+            $this->hit('K2 bulk create into another PM project (same tenant)', $who, $u, 'api', '/api/auth/bulk/tasks/create', ['project_id' => $p2->id, 'tasks' => [['title' => "bulk2 {$who}", 'name' => "bulk2 {$who}", 'description' => 'x', 'assignee_id' => $userB->id]]]);
+        }
+
+        // H: template application without task.create
+        [$template] = $this->seedV2Template($A, $pm1, 'WT-O17');
+        DB::table('work_template_versions')->where('work_template_id', $template->id)->update(['published_at' => now(), 'is_immutable' => true, 'published_by' => $pm1->id]);
+        $this->hit('H1 template.apply WITHOUT task.create, web apply', 'TemplateApplier', $tmpl, 'api', "/app/projects/{$p1->id}/work-templates/apply", ['work_template_id' => (string) $template->id]);
+        $this->hit('H2 template.apply WITHOUT task.create, api/zena apply, other PM project', 'TemplateApplier', $tmpl, 'api', "/api/zena/projects/{$p2->id}/apply-template", ['work_template_id' => (string) $template->id]);
+        $this->hit('H3 PM1 applies template to PM2 project', 'PM1', $pm1, 'api', "/api/zena/projects/{$p2->id}/apply-template", ['work_template_id' => (string) $template->id, 'force' => true]);
+        $this->hit('H4 Creator (task.create, no template.apply) applies', 'Creator', $creator, 'api', "/api/zena/projects/{$p1->id}/apply-template", ['work_template_id' => (string) $template->id]);
+        // H5: CoreProject parameterless-gate apply route, cross-tenant project id
+        $this->hit('H5 CoreProject api/work-templates/{id}/apply, tenant-B project, legacy-role-only user', 'Member', $outsiderA, 'api', "/api/work-templates/{$template->id}/apply", ['project_id' => $pB->id]);
+        $this->hit('H6 ProjectTemplateController api/templates/apply (integer project_id rule)', 'Member', $outsiderA, 'api', '/api/templates/apply', ['template_id' => 'x', 'project_id' => $p1->id]);
+        $this->hit('H7 Src WorkTemplate api/templates/{id}/apply', 'Member', $outsiderA, 'api', '/api/templates/' . $template->id . '/apply', ['project_id' => $p1->id]);
+
+
+        // ---- follow-ups ----
+        $a = DB::table('task_assignments')->orderByDesc('created_at')->first();
+        $this->rows[] = ['scenario' => 'H1/H2 assignment created by template apply', 'assignment_user' => $a?->user_id, 'pm1' => $pm1->id, 'pm2' => $pm2->id, 'applier' => $tmpl->id, 'task_project' => $a ? DB::table('tasks')->where('id', $a->task_id)->value('project_id') : null, 'p2' => $p2->id];
+        $p4 = Project::factory()->create(['tenant_id' => $A->id, 'pm_id' => $pm2->id]);
+        $this->hit('H3b PM1 applies template to fresh PM2 project', 'PM1', $pm1, 'api', "/api/zena/projects/{$p4->id}/apply-template", ['work_template_id' => (string) $template->id]);
+        $bTask = \App\Models\Task::factory()->create(['tenant_id' => $B->id, 'project_id' => $pB->id]);
+        $this->hit('I5b parent_id = other-tenant task', 'PM1', $pm1, 'api', '/api/zena/tasks', $pl($p1) + ['parent_id' => (string) $bTask->id]);
+        $t = $this->lastTask();
+        $this->rows[] = ['scenario' => 'I5b persisted', 'parent_id_on_row' => $t?->parent_id, 'bTask' => $bTask->id];
+        $this->hit('I6 dependencies = other-tenant task', 'PM1', $pm1, 'api', '/api/zena/tasks', $pl($p1) + ['dependencies' => [(string) $bTask->id]]);
+        $this->rows[] = ['scenario' => 'I6 persisted', 'dependency_rows_to_bTask' => Schema::hasTable('task_dependencies') ? DB::table('task_dependencies')->where('depends_on_task_id', $bTask->id)->count() : 'no table'];
+        $this->rows[] = ['scenario' => 'H5 schema check: work_templates columns used by Src\\CoreProject\\Models\\WorkTemplate', 'has_is_active' => Schema::hasColumn('work_templates', 'is_active'), 'has_template_data' => Schema::hasColumn('work_templates', 'template_data')];
+        $super2 = $this->user($A, null, null);
+        DB::table('user_roles')->insert(['user_id' => $super2->id, 'role_id' => $superRid, 'created_at' => now(), 'updated_at' => now()]);
+        $this->hit('F3 super_admin (zero permissions) bulk create into tenant B', 'SuperAdminRole', $super2, 'api', '/api/auth/bulk/tasks/create', ['project_id' => $pB->id, 'tenant_id' => $B->id, 'tasks' => [['title' => 'bulk super', 'name' => 'bulk super', 'description' => 'x']]]);
+        $this->rows[] = ['scenario' => 'super_admin role permissions in probe DB', 'count' => DB::table('role_permissions')->where('role_id', $superRid)->count()];
+
+        $this->rows[] = ['scenario' => 'ALL assignments created by template applies', 'ids' => ['pm1' => $pm1->id, 'pm2' => $pm2->id, 'applier' => $tmpl->id, 'p1' => $p1->id, 'p2' => $p2->id, 'p4' => $p4->id], 'rows' => DB::table('task_assignments')->join('tasks', 'tasks.id', '=', 'task_assignments.task_id')->get(['task_assignments.user_id', 'task_assignments.role', 'tasks.project_id', 'tasks.name', 'tasks.created_by'])->all()];
+        $this->rows[] = ['scenario' => 'audit rows for bulk', 'audit_logs_bulk' => Schema::hasTable('audit_logs') ? DB::table('audit_logs')->where('action', 'like', '%bulk%')->count() : null, 'interaction_logs' => Schema::hasTable('interaction_logs') ? DB::table('interaction_logs')->count() : null];
+        $out = ['grants_after_DatabaseSeeder' => $grants, 'rows' => $this->rows];
+        file_put_contents((string) getenv('O17_OUT'), json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->assertTrue(true);
+    }
+}

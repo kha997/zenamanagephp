@@ -30,7 +30,7 @@ class TaskApiTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin();
+        $this->apiActingAsTenantAdmin([], null, ['task.create', 'task.view', 'task.update']); // OWN-2026-024 H3: + task.view/task.update route codes (bypass removed). S4c fixture: task creation requires the canonical task.create permission (the route gate is stubbed in this suite)
         $this->user = $this->apiFeatureUser;
         $this->tenantId = $this->apiFeatureTenant->id;
     }
@@ -79,6 +79,7 @@ class TaskApiTest extends TestCase
     {
         $project = Project::factory()->create([
             'tenant_id' => $this->tenantId,
+            'pm_id' => $this->apiFeatureUser->id, // O-17 fixture (UAT-RECOVERY 06): the creator is the project's PM
         ]);
 
         // Tạo prerequisite tasks
@@ -119,6 +120,7 @@ class TaskApiTest extends TestCase
 
         $task = Task::factory()->create([
             'project_id' => $project->id,
+            'assignee_id' => $this->user->id, // S4/O-14: acting user is the task's assignee (legitimate ownership relation)
             'status' => 'pending',
             'tenant_id' => $this->tenantId,
         ]);

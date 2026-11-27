@@ -2,6 +2,11 @@
 
 namespace Src\RBAC\Services;
 
+use App\Support\Rbac\PermissionRevocations;
+use App\Support\Rbac\RbacProtection;
+use App\Support\Rbac\SecurityAudit;
+use Illuminate\Support\Facades\DB;
+use App\Support\PlatformPermissions;
 use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
 use Src\Foundation\EventBus;
@@ -126,6 +131,13 @@ class PermissionMatrixService
                 continue;
             }
 
+            // OWN-2026-024 H2a (D1/D6): a CSV import can neither create nor attach a platform (platform.*) permission.
+            if (PlatformPermissions::isPlatformCode($permissionCode) || PlatformPermissions::isPlatformModule($module)) {
+                $errors[] = "Dòng " . ($lineNumber + 2) . ": Quyền nền tảng (platform.*) không thể nhập qua CSV";
+                $skipped++;
+                continue;
+            }
+
             // Validate allow boolean
             $allowBool = strtolower($allow) === 'true';
             if (!$allowBool) {
@@ -197,6 +209,23 @@ class PermissionMatrixService
                 continue;
             }
 
+            // OWN-2026-024 H2b (Owner Gate 2, D4/D5): the CSV path follows the same rules as the role-sync endpoint — protected
+            // codes added or removed need real Owner authority and must be held by the actor; deliberately revoked codes are never
+            // re-added here (use the explicit re-grant path). Checked BEFORE any permission row or grant is written.
+            $requestedCodes = array_values(array_unique(array_map(static fn (array $r): string => (string) $r['code'], $permissionRows)));
+            $currentCodes = $role->permissions()->pluck('code')->map(static fn ($c): string => (string) $c)->all();
+            $changedCodes = array_merge(array_diff($requestedCodes, $currentCodes), array_diff($currentCodes, $requestedCodes));
+            $importActor = RbacProtection::currentActor();
+            if (!RbacProtection::actorMayHandleCodes($importActor, $changedCodes)) {
+                $errors[] = "Role '{$roleName}': không được phép thay đổi quyền nhạy cảm qua CSV";
+                continue;
+            }
+            $revokedRequested = array_values(array_filter($requestedCodes, static fn (string $c): bool => PermissionRevocations::isRevoked((string) $role->id, $c)));
+            if ($revokedRequested !== []) {
+                $errors[] = "Role '{$roleName}': quyền đã bị thu hồi có chủ đích, không thể cấp lại qua CSV: " . implode(', ', $revokedRequested);
+                continue;
+            }
+
             // Tạo permission nếu chưa tồn tại — deferred until after role
             // validation above (Correction 11).
             $permissionCodes = [];
@@ -214,7 +243,16 @@ class PermissionMatrixService
 
             // Sync permissions — resolve code -> id, sync() requires primary keys.
             $permissionIds = Permission::whereIn('code', $permissionCodes)->pluck('id')->toArray();
-            $role->permissions()->sync($permissionIds);
+            DB::transaction(function () use ($role, $permissionIds, $importActor, $currentCodes, $requestedCodes): void {
+                $role->permissions()->sync(array_fill_keys($permissionIds, \App\Support\Rbac\RbacSchema::grantSourceAttributes('manual')));
+                if ($importActor !== null) {
+                    SecurityAudit::record((string) $importActor->id, $role->tenant_id === null ? null : (string) $role->tenant_id, 'rbac.role.permissions_imported', 'role', (string) $role->id, PermissionRevocations::actorLabel($importActor), [
+                        'role' => (string) $role->name,
+                        'added' => array_values(array_diff($requestedCodes, $currentCodes)),
+                        'removed' => array_values(array_diff($currentCodes, $requestedCodes)),
+                    ]);
+                }
+            });
             $rolesUpdated++;
 
             // Phát sự kiện — GAP-042 Gate-3 Round-1 Correction 2: the prior

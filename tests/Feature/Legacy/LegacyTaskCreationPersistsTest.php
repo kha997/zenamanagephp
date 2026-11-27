@@ -51,6 +51,7 @@ class LegacyTaskCreationPersistsTest extends TestCase
         $user = $this->makeUserWithTaskCreatePermission($tenant);
         $project = Project::factory()->create([
             'tenant_id' => $tenant->id,
+            'pm_id' => $user->id, // O-17 fixture (UAT-RECOVERY 06): the creator is the project's PM
         ]);
 
         // A valid CSRF token requires an established session — GET a page

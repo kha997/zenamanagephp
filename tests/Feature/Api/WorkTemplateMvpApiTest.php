@@ -329,7 +329,7 @@ class WorkTemplateMvpApiTest extends TestCase
     public function test_api_created_template_contract_survives_publish_preview_and_apply(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
         $reviewer = User::factory()->create(['tenant_id' => (string) $tenant->id, 'is_active' => true]);
         $project = Project::factory()->create([
             'tenant_id' => (string) $tenant->id,
@@ -430,7 +430,7 @@ class WorkTemplateMvpApiTest extends TestCase
     public function test_project_work_instances_list_requires_work_view_permission(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.apply']);
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
         $project = Project::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'created_by' => (string) $user->id,
@@ -540,7 +540,7 @@ class WorkTemplateMvpApiTest extends TestCase
     public function test_apply_snapshot_isolated_from_later_published_versions(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
 
         $project = Project::factory()->create(['tenant_id' => $tenant->id, 'created_by' => $user->id, 'pm_id' => $user->id]);
         $template = $this->createDraftTemplate($tenant, $user, [
@@ -586,7 +586,7 @@ class WorkTemplateMvpApiTest extends TestCase
     public function test_apply_project_generates_tasks_assignments_due_dates_and_checklist_snapshot(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
         $reviewer = User::factory()->create(['tenant_id' => (string) $tenant->id, 'is_active' => true]);
         $project = Project::factory()->create([
             'tenant_id' => (string) $tenant->id,
@@ -742,7 +742,7 @@ class WorkTemplateMvpApiTest extends TestCase
     public function test_apply_component_generates_component_scoped_tasks(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
         $project = Project::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'created_by' => (string) $user->id,
@@ -775,7 +775,7 @@ class WorkTemplateMvpApiTest extends TestCase
     public function test_apply_remains_idempotent_even_with_different_idempotency_keys(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
         $project = Project::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'created_by' => (string) $user->id,
@@ -810,7 +810,7 @@ class WorkTemplateMvpApiTest extends TestCase
     public function test_apply_dry_run_does_not_write_database(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
         $project = Project::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'created_by' => (string) $user->id,
@@ -857,7 +857,7 @@ class WorkTemplateMvpApiTest extends TestCase
     public function test_apply_fails_atomically_when_secondary_assignment_rule_unresolved(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */]);
         $project = Project::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'created_by' => (string) $user->id,
@@ -950,7 +950,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'template.view',
             'template.edit_draft',
             'template.publish',
-            'template.apply',
+            'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */,
             'work.approve',
             'work.update',
         ]);
@@ -1017,7 +1017,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'template.view',
             'template.edit_draft',
             'template.publish',
-            'template.apply',
+            'template.apply', 'task.create' /* O-17 fixture: applying creates tasks */,
             'work.view',
             'work.update',
         ]);

@@ -46,9 +46,13 @@ class ChangeRequestApiTest extends TestCase
         $this->tenant = Tenant::factory()->create();
         $this->project = Project::factory()->for($this->tenant)->create();
 
+        // O-17 / CB-4 fixture (UAT-RECOVERY 06): apply creates a task, so it checks the canonical change-request.apply and
+        // task.create grants in-controller and requires the project relationship (O-17i); the persona's `super_admin` role and
+        // the system_user_roles grant below are not canonical, so grant both explicitly and make the persona the project's PM.
         $this->user = $this->apiActingAsTenantAdmin([
             'tenant_id' => $this->tenant->id,
-        ], $this->tenant);
+        ], $this->tenant, ['change-request.apply', 'task.create']);
+        $this->project->forceFill(['pm_id' => $this->user->id])->save();
 
         $this->token = $this->apiFeatureToken;
         $this->headers = $this->apiHeaders;
@@ -88,10 +92,19 @@ class ChangeRequestApiTest extends TestCase
                 ]
             );
 
+            // OWN-2026-024 H3: User::hasPermission matches permissions.name, which Src\RBAC\Models\Permission does not mass-assign;
+            // a nameless test code never authorized (the super_admin role-name bypass used to hide that).
+            if ($permission->getAttribute('name') === null) {
+                $permission->forceFill(['name' => $permissionCode])->save();
+            }
+
             $role->permissions()->syncWithoutDetaching($permission->id);
         }
 
         $this->user->systemRoles()->syncWithoutDetaching($role->id);
+        // OWN-2026-024 H3 fixture: route permissions are read from user_roles only (system_user_roles never authorized; the
+        // super_admin role-name bypass used to hide that), so attach the same test role there too.
+        $this->user->roles()->syncWithoutDetaching($role->id);
     }
 
     /**

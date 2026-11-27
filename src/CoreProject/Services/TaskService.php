@@ -63,6 +63,8 @@ class TaskService
         return DB::transaction(function () use ($data, $project) {
             // Tạo task
             $task = Task::create([
+                // O-17 / tenant boundary: the task belongs to its project's tenant (was written with no tenant_id).
+                'tenant_id' => $project->tenant_id,
                 'project_id' => $data['project_id'],
                 'component_id' => $data['component_id'] ?? null,
                 'phase_id' => $data['phase_id'] ?? null,
@@ -410,26 +412,44 @@ class TaskService
      */
     private function createTaskAssignments(Task $task, array $assignments): void
     {
-        $totalPercentage = 0;
-        
+        // OWN-2026-024 SPLIT-PERCENT: this path (POST/PUT api/v1/tasks with `assignments`) runs inside createTask()/updateTask()'s
+        // transaction. Take the task-row lock, reject a set whose recorded shares would exceed 100 % (or name a user twice), and
+        // write tenant_id from the task. InvalidArgumentException → HTTP 400 and the whole transaction (task included) rolls back.
+        \Illuminate\Support\Facades\DB::table('tasks')->where('id', $task->id)->lockForUpdate()->first(['id']);
+
+        $rows = [];
+        $users = [];
+        $totalPercentage = 0.0;
         foreach ($assignments as $assignment) {
-            $percentage = $assignment['split_percent'] ?? 100.0;
+            $userId = (string) $assignment['user_id'];
+            if (isset($users[$userId])) {
+                throw new \InvalidArgumentException('User được phân công hai lần cho cùng task.');
+            }
+            $users[$userId] = true;
+            $percentage = round((float) ($assignment['split_percent'] ?? \App\Services\TaskAssignmentShares::DEFAULT_PERCENT), 2);
             $totalPercentage += $percentage;
-            
-            TaskAssignment::create([
+            $rows[] = ['user_id' => $userId, 'split_percent' => $percentage, 'role' => $assignment['role'] ?? null];
+        }
+
+        $existing = \App\Services\TaskAssignmentShares::allocated((string) $task->id);
+        if (round($existing + $totalPercentage, 2) > \App\Services\TaskAssignmentShares::MAX_TOTAL) {
+            throw new \InvalidArgumentException('Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại: ' . $existing . '%, yêu cầu: ' . $totalPercentage . '%');
+        }
+
+        foreach ($rows as $row) {
+            TaskAssignment::create($row + [
                 'task_id' => $task->id,
-                'user_id' => $assignment['user_id'],
-                'split_percent' => $percentage,
-                'role' => $assignment['role'] ?? null
+                'tenant_id' => (string) $task->tenant_id,
+                'assigned_at' => now(),
             ]);
         }
-        
-        // Cảnh báo nếu tổng phần trăm không phải 100%
+
+        // Cảnh báo nếu tổng phần trăm nhỏ hơn 100% (chưa phân bổ hết)
         if (abs($totalPercentage - 100.0) > 0.01) {
             \Log::warning("Task {$task->ulid}: Tổng phần trăm assignment là {$totalPercentage}%, không phải 100%");
         }
     }
-    
+
     /**
      * Cập nhật task assignments
      * 
@@ -438,6 +458,10 @@ class TaskService
      */
     private function updateTaskAssignments(Task $task, array $assignments): void
     {
+        // OWN-2026-024: take the task-row lock BEFORE touching assignment rows, the same order as
+        // TaskAssignmentShares::withTaskLock (task, then assignments), so a concurrent assignment write cannot deadlock with this.
+        \Illuminate\Support\Facades\DB::table('tasks')->where('id', $task->id)->lockForUpdate()->first(['id']);
+
         // Xóa assignments cũ
         $task->assignments()->delete();
         

@@ -64,6 +64,7 @@ class ChangeRequestStakeholderNotificationTest extends TestCase
             'change-request.approve',
             'change-request.reject',
             'change-request.apply',
+            'task.create', // O-17i fixture (UAT-RECOVERY 06): apply creates a task
         ]);
 
         $token = $this->apiLoginToken($this->approver, $this->tenant);
@@ -73,6 +74,20 @@ class ChangeRequestStakeholderNotificationTest extends TestCase
             'tenant_id' => (string) $this->tenant->id,
             'created_by' => (string) $this->approver->id,
             'pm_id' => (string) $this->pm->id,
+        ]);
+        $this->approverParticipates($this->project);
+    }
+
+    /** O-17i fixture: the applier is an active participant (not PM, so the PM stays a distinct stakeholder). */
+    private function approverParticipates(Project $project): void
+    {
+        \Illuminate\Support\Facades\DB::table('project_user_roles')->insert([
+            'id' => (string) \Illuminate\Support\Str::ulid(),
+            'project_id' => (string) $project->id,
+            'user_id' => (string) $this->approver->id,
+            'role_id' => (string) $this->approver->roles()->value('roles.id'),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 
@@ -226,6 +241,7 @@ class ChangeRequestStakeholderNotificationTest extends TestCase
             'created_by' => (string) $this->approver->id,
             'pm_id' => (string) $this->requester->id,
         ]);
+        $this->approverParticipates($project);
         $cr = $this->makeApprovedCr($project, 'CR-S3-2A-004');
         $countBefore = Notification::count();
 

@@ -23,7 +23,7 @@ class TaskAssignmentFactory extends Factory
         return [
             'task_id' => Task::factory(),
             'user_id' => User::factory(),
-            'split_percentage' => $this->faker->randomFloat(2, 10, 100),
+            'split_percent' => $this->faker->randomFloat(2, 10, 100),
             'assigned_by' => User::factory(),
             'assigned_at' => $this->faker->dateTimeBetween('-3 months', 'now'),
             'role_in_task' => $this->faker->randomElement(['lead', 'contributor', 'reviewer']),
@@ -36,7 +36,7 @@ class TaskAssignmentFactory extends Factory
     public function fullAssignment(): static
     {
         return $this->state(fn (array $attributes) => [
-            'split_percentage' => 100.00,
+            'split_percent' => 100.00,
             'role_in_task' => 'lead',
         ]);
     }
@@ -48,7 +48,7 @@ class TaskAssignmentFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'role_in_task' => 'lead',
-            'split_percentage' => $this->faker->randomFloat(2, 50, 100),
+            'split_percent' => $this->faker->randomFloat(2, 50, 100),
         ]);
     }
 }

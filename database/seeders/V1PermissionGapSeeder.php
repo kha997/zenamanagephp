@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\Rbac\RbacSeedGrants;
 use Illuminate\Database\Seeder;
 
 /**
@@ -102,18 +103,7 @@ class V1PermissionGapSeeder extends Seeder
      */
     private function grant(array $roleNames, array $codes): void
     {
-        $permissionIds = Permission::query()->whereIn('code', $codes)->pluck('id')->all();
-
-        $lowered = array_values(array_unique(array_map('strtolower', $roleNames)));
-        $placeholders = implode(',', array_fill(0, count($lowered), '?'));
-
-        $roles = Role::query()
-            ->whereRaw("LOWER(name) IN ({$placeholders})", $lowered)
-            ->get();
-
-        foreach ($roles as $role) {
-            /** @var Role $role */
-            $role->permissions()->syncWithoutDetaching($permissionIds);
-        }
+        // OWN-2026-024 H2b (D4): single seed grant path — additive, global roles only, never platform.*, never a revoked grant.
+        RbacSeedGrants::grantCodesToGlobalRolesNamed($roleNames, $codes);
     }
 }

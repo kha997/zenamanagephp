@@ -6,6 +6,8 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\PlatformPermissions;
+use App\Support\Rbac\RbacSeedGrants;
 use Illuminate\Database\Seeder;
 
 /**
@@ -100,14 +102,16 @@ class PermissionSeeder extends Seeder
      */
     private function assignPermissionsToRoles(): void
     {
-        $adminRole = Role::where('name', 'System Admin')->first();
-        $managerRole = Role::where('name', 'Project Manager')->first();
-        $memberRole = Role::where('name', 'Project Member')->first();
+        // OWN-2026-024 H2b: global roles only (a tenant role can never borrow these names' grants).
+        $adminRole = Role::where('name', 'System Admin')->whereNull('tenant_id')->first();
+        $managerRole = Role::where('name', 'Project Manager')->whereNull('tenant_id')->first();
+        $memberRole = Role::where('name', 'Project Member')->whereNull('tenant_id')->first();
 
         if ($adminRole) {
-            // Admin có tất cả permissions
-            $allPermissions = Permission::all();
-            $adminRole->permissions()->sync($allPermissions->pluck('id'));
+            // Admin có tất cả permissions — EXCEPT the platform namespace (OWN-2026-024 D1/D6: platform codes are never part of a
+            // tenant or admin role; only a server-provisioned Platform Operator may hold them).
+            $allPermissions = PlatformPermissions::excludeFrom(Permission::query())->get();
+            RbacSeedGrants::grantIds((string) $adminRole->id, $allPermissions->pluck('id')); // OWN-2026-024 H2b (D4): single seed grant path — additive, global roles only, never platform.*, never a revoked grant.
         }
 
         if ($managerRole) {
@@ -125,7 +129,8 @@ class PermissionSeeder extends Seeder
                 'user-preferences.read', 'user-preferences.update',
                 'interaction_log.create', 'interaction_log.read', 'interaction_log.approve',
             ])->get();
-            $managerRole->permissions()->sync($managerPermissions->pluck('id'));
+            // O-18 (Owner, 2026-11-24): additive — re-seeding must never delete grants an administrator added by hand.
+            RbacSeedGrants::grantIds((string) $managerRole->id, $managerPermissions->pluck('id'));
         }
 
         if ($memberRole) {
@@ -141,22 +146,17 @@ class PermissionSeeder extends Seeder
                 'settings.security.read',
                 'user-preferences.read',
                 'interaction_log.create', 'interaction_log.read',
-                // Các mục nav "Tổng quan"/"Kinh doanh" gate theo bộ mã .view mới hơn
-                // (task.view, crm.view, ...) khác với bộ .read/.create/.update ở trên -
-                // thiếu các dòng này khiến Project Member bị 403 ở gần hết trang chính
-                // (phát hiện 2026-07-20 khi kiểm thử thật với designer@zena.local).
-                'task.view', 'crm.view', 'material.view', 'vendor.view',
-                'boq.view', 'contract.view', 'event-record.view',
-                // Phát hiện đợt 2 (cùng ngày): các trang này gate bằng Policy
-                // ($this->authorize() trong controller) đọc thẳng permission,
-                // không qua middleware rbac: nên đợt rà đầu (grep theo route
-                // middleware) bỏ sót. webhook.view CỐ Ý không thêm - đó là cấu
-                // hình tích hợp hệ thống, thuộc phạm vi admin, không phải việc
-                // thường ngày của nhân viên.
-                'design-item.view', 'material.read', 'site_diary.view',
-                'material-receipt.view',
+                // O-18 (Owner decision 2026-11-24, Option D): the modern ".view" codes added here on 2026-07-20 were
+                // resolved BEFORE ZenaPermissionsSeeder creates them, so a first seed silently skipped them and only a
+                // second seed granted them (non-deterministic). They are no longer listed here:
+                //  - the six approved operational codes are granted deterministically, after the codes exist, by
+                //    ZenaProjectManagerRolePermissionSeeder::O18_OPERATIONAL_PERMISSION_CODES (Member AND Manager);
+                //  - crm.view, contract.view, boq.view, vendor.view, event-record.view are deliberately WITHHELD from
+                //    Project Member (commercially sensitive / activity feed carries commercial events).
+                // webhook.view is still intentionally not granted (admin-scope integration configuration).
             ])->get();
-            $memberRole->permissions()->sync($memberPermissions->pluck('id'));
+            // O-18: additive — re-seeding must never delete grants an administrator added by hand.
+            RbacSeedGrants::grantIds((string) $memberRole->id, $memberPermissions->pluck('id'));
         }
     }
 }

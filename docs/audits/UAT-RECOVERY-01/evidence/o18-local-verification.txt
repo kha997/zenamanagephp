@@ -1,0 +1,54 @@
+# O-18 local patch verification (uncommitted, on top of b4440a3d2), 2026-11-24. Backup x4 classes excluded (real storage/backups).
+## SQLite (phpunit.xml)
+recovery: OK (144 tests, 957 assertions)
+unit: Tests: 960, Assertions: 3695, Failures: 7, PHPUnit Deprecations: 335, Skipped: 27.
+feature: Tests: 3050, Assertions: 27188, PHPUnit Deprecations: 236, Skipped: 33.
+
+failing identities:
+  [unit] Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_waits_while_pending_then_passes_when_all_checks_pass
+  [unit] Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_fails_on_the_first_poll_when_a_check_has_failed
+  [unit] Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_a_cancelled_check_counts_as_failed
+  [unit] Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_fails_after_the_last_poll_when_checks_are_still_pending
+  [unit] Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_its_own_check_is_ignored
+  [unit] Tests\Unit\ZenaInvariantsDiscoveryTest::test_discovers_both_doc_comment_and_attribute_declared_groups
+  [unit] Tests\Unit\ZenaInvariantsDiscoveryTest::test_returns_nothing_for_a_group_with_zero_matches
+  (unit: the same 7 pre-existing failures as origin/main — EvidenceFreshnessLiveCheck x5, ZenaInvariantsDiscovery x2; feature: 0 failures — DashboardApiTest x7 is time-dependent and passed in this run)
+
+## Quarantine group (SQLite) after release of D3
+ ✘ D2 user with only seeded project manager role passes api gate
+ ✘ D2 no seeded user can create users through canonical api
+Tests: 2, Assertions: 3, Failures: 2, PHPUnit Deprecations: 518.
+
+## New O-18 test class (SQLite)
+ ✔ First seed gives member exactly the 26 code baseline
+ ✔ Manager gains exactly the six approved codes and nothing else
+ ✔ First second and third seed are identical for every role
+ ✔ Reseeding never deletes grants added by hand
+ ✔ Withheld and admin codes are never granted to member or manager by seeding
+ ✔ Member and manager can open my work today schedule and own timesheet
+ ✔ Member is denied commercial data and the ai summary
+ ✔ Tenant isolation holds for the new operational grants
+ ✔ Task view does not open other peoples timesheets
+OK (9 tests, 82 assertions)
+
+## RED check (same new tests against UNPATCHED seeders)
+ ✘ First seed gives member exactly the 26 code baseline
+ ✘ Manager gains exactly the six approved codes and nothing else
+ ✘ First second and third seed are identical for every role
+ ✘ Reseeding never deletes grants added by hand
+ ✘ Withheld and admin codes are never granted to member or manager by seeding
+ ✘ Member and manager can open my work today schedule and own timesheet
+ ✔ Member is denied commercial data and the ai summary
+ ✘ Tenant isolation holds for the new operational grants
+ ✘ Task view does not open other peoples timesheets
+Tests: 9, Assertions: 55, Failures: 8.
+
+## Isolated MariaDB 10.4.28 (scratch datadir, port 33077, ZENA_INVARIANTS_DB=mysql, migrate:fresh first) — CI runs MySQL 8, so this is MariaDB-level, not MySQL-8 parity
+tests/Feature/Recovery + ZenaProjectManagerRolePermissionSeederTest: Tests: 146, Assertions: 920, Failures: 2.
+  failing: Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_unauthorised_actors_cannot_assign_reassign_or_unassign_on_any_surface
+  failing: Tests\Feature\Recovery\UatRecovery04bTaskSurfaceTest::test_owning_project_pm_is_authorised_on_the_assignment_surfaces
+same 04b class on UNPATCHED code (MariaDB): 2 failures, identical identities -> pre-existing (task_assignments.split_percent missing in migrations; SQLSTATE 42S22)
+quarantine group on MariaDB: 2 tests, 2 failures (D2 x2, O-2/O-8)
+
+## Static gates
+PHPStan (phpstan.neon, app/routes/database): no errors. php-cs-fixer on changed PHP files: clean. SSOT orphan routes: pass; lint_tests: pass; domain-ownership: pass (routes.json warning prefix stripped locally, see earlier gotcha).
